@@ -1,3 +1,7 @@
+import os
+import sys
+path = "/".join([x for x in os.path.realpath(__file__).split('/')[:-2]])
+sys.path.insert(0, path)
 import time
 import logging
 import numpy as np
