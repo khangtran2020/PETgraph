@@ -172,6 +172,8 @@ def main(path_g, path_feat_db='data/store.db', path_result='exp_result.csv',
             df_edges['seed'] = 1
         with timeit(logger, 'g-init'):
             g = create_naive_het_graph_from_edges(df_edges)
+        print(g)
+        exit()
 
         seed_set = set(df_edges.query('seed>0')['src'])
         logger.info('#seed %d', len(seed_set))
