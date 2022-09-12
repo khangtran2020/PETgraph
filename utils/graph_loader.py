@@ -1,3 +1,7 @@
+import os
+import sys
+path = "/".join([x for x in os.path.realpath(__file__).split('/')[:-2]])
+sys.path.insert(0, path)
 from typing import Tuple, Dict, List, Optional, Union, Set
 from collections import defaultdict
 import logging
