@@ -81,6 +81,7 @@ def main(args, path_db='./data/feat_store.db'):
     df['id'] = np.arange(df.shape[0])
     feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols]
+    temp_df.drop('OrderingAccount', axis=1, inplace=True)
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
@@ -97,6 +98,7 @@ def main(args, path_db='./data/feat_store.db'):
     df['id'] = np.arange(df.shape[0])
     feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols]
+    temp_df.drop('OrderingOriginAdd', axis=1, inplace=True)
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
