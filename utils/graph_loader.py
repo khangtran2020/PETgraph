@@ -1,5 +1,7 @@
 import os
 import sys
+import time
+from contextlib import contextmanager
 path = "/".join([x for x in os.path.realpath(__file__).split('/')[:-2]])
 sys.path.insert(0, path)
 from typing import Tuple, Dict, List, Optional, Union, Set
@@ -15,8 +17,13 @@ from torch_geometric.data import Data as PygData
 
 import tqdm
 
-from utils.utils import timeit
-
+@contextmanager
+def timeit(logger, task):
+    logger.info('Started task %s ...', task)
+    t0 = time.time()
+    yield
+    t1 = time.time()
+    logger.info('Completed task %s - %.3f sec.', task, t1-t0)
 
 class NaiveHetGraph(object):
     logger = logging.getLogger('native-het-g')
