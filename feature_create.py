@@ -62,7 +62,7 @@ def main(args, path_db='./data/feat_store.db'):
     df = pd.read_csv(args.data_path + args.bank_path)
     feature_cols = list(df.columns)
     feature_cols.remove('id')
-    temp_df = df[['id'] + feature_cols]
+    temp_df = df[['id'] + feature_cols].copy()
     print(temp_df.head())
     temp_df.drop('Sender',axis=1, inplace=True)
     x = temp_df.values
@@ -78,9 +78,8 @@ def main(args, path_db='./data/feat_store.db'):
     # Acc
     df = pd.read_csv(args.data_path + args.acc_path)
     feature_cols = list(df.columns)
-    df['id'] = np.arange(df.shape[0])
     feature_cols.remove('id')
-    temp_df = df[['id'] + feature_cols]
+    temp_df = df[['id'] + feature_cols].copy()
     temp_df.drop('OrderingAccount', axis=1, inplace=True)
     x = temp_df.values
     with store.db.write_batch() as wb:
@@ -95,9 +94,8 @@ def main(args, path_db='./data/feat_store.db'):
     # Add
     df = pd.read_csv(args.data_path + args.add_path)
     feature_cols = list(df.columns)
-    df['id'] = np.arange(df.shape[0])
     feature_cols.remove('id')
-    temp_df = df[['id'] + feature_cols]
+    temp_df = df[['id'] + feature_cols].copy()
     temp_df.drop('OrderingOriginAdd', axis=1, inplace=True)
     x = temp_df.values
     with store.db.write_batch() as wb:
