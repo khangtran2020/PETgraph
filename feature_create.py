@@ -64,10 +64,11 @@ def main(args, path_db='./data/feat_store.db'):
     feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols]
     print(temp_df.head())
+    temp_df.drop('Sender',axis=1, inplace=True)
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
-            key = x[i, 0].encode('utf-8')
+            key = x[i, 0]
             value = x[i, 1:]
             store.put(key, value, wb=wb, dtype=np.float32)
     del (temp_df)
