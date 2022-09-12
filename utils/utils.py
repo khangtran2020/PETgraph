@@ -37,29 +37,72 @@ def create_naive_het_graph_from_edges(df):
     logger.setLevel(logging.INFO)
 
     with timeit(logger, 'node-type-init'):
-        view = df[['src', 'ts']].drop_duplicates()
+        view = df[['MessageId', 'hour']].drop_duplicates()
         node_ts = dict((k, v) for k, v in view.itertuples(index=False))
-        view = df[['src', 'src_type']].drop_duplicates()
+        df['src_type'] = 1
+        view = df[['MessageId', 'src_type']].drop_duplicates()
         node_type = dict(
             (node, tp)
             for node, tp in view.itertuples(index=False)
         )
-        view = df[['dst', 'dst_type']].drop_duplicates()
+        df['sender_bank_type'] = 0
+        view = df[['Sender', 'sender_bank_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        view = df[['Receiver', 'sender_bank_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        df['account_type'] = 1
+        view = df[['OrderingAccount', 'account_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        view = df[['BeneficiaryAccount', 'account_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        df['address_type'] = 2
+        view = df[['OrderingOriginAdd', 'address_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        view = df[['BeneficiaryOriginAdd', 'address_type']].drop_duplicates()
         node_type.update(dict(
             (node, tp)
             for node, tp in view.itertuples(index=False)
         ))
 
-    if 'graph_edge_type' not in df:
-        df['graph_edge_type'] = 'default'
+    # if 'sender_type' not in df:
+    df['sender_type'] = 'sender'
+    df['receiver_type'] = 'receiver'
+    df['ordering_type'] = 'ordering'
+    df['beneficiary_type'] = 'beneficiary'
+    df['ordering_add_type'] = 'order_add'
+    df['ben_add_type'] = 'ben_add'
 
     with timeit(logger, 'edge-list-init'):
-        edge_list = list(
-            df[['src', 'dst', 'graph_edge_type']].drop_duplicates().itertuples(index=False))
+        edge_list = list(df[['MessageId', 'Sender', 'sender_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(df[['MessageId', 'Receiver', 'receiver_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(df[['MessageId', 'OrderingAccount', 'ordering_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(df[['MessageId', 'BeneficiaryAccount', 'beneficiary_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(df[['MessageId', 'OrderingOriginAdd', 'ordering_add_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(df[['MessageId', 'BeneficiaryOriginAdd', 'ben_add_type']].drop_duplicates().itertuples(index=False))
         edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
 
     select = df['seed'] > 0
-    view = df[select][['src', 'src_label']].drop_duplicates()
+    view = df[select][['MessageId', 'Label']].drop_duplicates()
     seed_label = dict((k, v) for k, v in view.itertuples(index=False))
 
     return NaiveHetGraph(node_type, edge_list,

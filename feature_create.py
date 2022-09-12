@@ -36,7 +36,7 @@ def main(args, path_db='./data/feat_store.db'):
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
-            key = 'T{}'.format(x[i, 0]).encode('utf-8')
+            key = x[i, 0]
             value = x[i, 1:]
             store.put(key, value, wb=wb, dtype=np.float32)
     del(temp_df)
@@ -51,7 +51,7 @@ def main(args, path_db='./data/feat_store.db'):
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
-            key = 't{}'.format(x[i, 0]).encode('utf-8')
+            key = x[i, 0]
             value = x[i, 1:]
             store.put(key, value, wb=wb, dtype=np.float32)
     del (temp_df)
@@ -61,12 +61,13 @@ def main(args, path_db='./data/feat_store.db'):
     # Bank
     df = pd.read_csv(args.data_path + args.bank_path)
     feature_cols = list(df.columns)
-    df['id'] = np.arange(df.shape[0])
+    feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols]
+    print(temp_df.head())
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
-            key = 'b{}'.format(x[i, 0]).encode('utf-8')
+            key = x[i, 0].encode('utf-8')
             value = x[i, 1:]
             store.put(key, value, wb=wb, dtype=np.float32)
     del (temp_df)
@@ -77,11 +78,12 @@ def main(args, path_db='./data/feat_store.db'):
     df = pd.read_csv(args.data_path + args.acc_path)
     feature_cols = list(df.columns)
     df['id'] = np.arange(df.shape[0])
+    feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols]
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
-            key = 'a{}'.format(x[i, 0]).encode('utf-8')
+            key = x[i, 0]
             value = x[i, 1:]
             store.put(key, value, wb=wb, dtype=np.float32)
     del (temp_df)
@@ -92,11 +94,12 @@ def main(args, path_db='./data/feat_store.db'):
     df = pd.read_csv(args.data_path + args.add_path)
     feature_cols = list(df.columns)
     df['id'] = np.arange(df.shape[0])
+    feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols]
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in tqdm(range(x.shape[0])):
-            key = 'ad{}'.format(x[i, 0]).encode('utf-8')
+            key = x[i, 0]
             value = x[i, 1:]
             store.put(key, value, wb=wb, dtype=np.float32)
     del (temp_df)
