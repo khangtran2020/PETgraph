@@ -1,5 +1,10 @@
 from typing import Union, Tuple, Optional
-
+import os
+import sys
+import time
+from contextlib import contextmanager
+path = "/".join([x for x in os.path.realpath(__file__).split('/')[:-2]])
+sys.path.insert(0, path)
 import torch
 import torch.nn as nn
 from torch import Tensor, LongTensor
