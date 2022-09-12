@@ -38,7 +38,7 @@ from ignite.engine import Events, create_supervised_trainer, create_supervised_e
 from ignite.metrics import Accuracy, Loss
 from ignite.handlers import EarlyStopping, ModelCheckpoint, Timer
 from ignite.contrib.metrics import AveragePrecision, ROC_AUC
-# from ignite.contrib.handlers.param_scheduler import CosineAnnealingScheduler
+from ignite.contrib.handlers.param_scheduler import CosineAnnealingScheduler
 
 from utils.fstore import FeatureStore
 from utils.utils import create_naive_het_graph_from_edges as _create_naive_het_graph_from_edges
