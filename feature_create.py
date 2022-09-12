@@ -13,7 +13,7 @@ import os
 import pandas as pd
 import numpy as np
 import networkx as nx
-import tqdm
+from tqdm import tqdm
 import glob
 import fire
 
