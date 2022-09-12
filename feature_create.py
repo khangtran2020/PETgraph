@@ -37,7 +37,7 @@ def main(args, path_db='./data/feat_store.db'):
     x = temp_df.values
     with store.db.write_batch() as wb:
         for i in range(x.shape[0]):
-            key = x[i, 0]
+            key = 'T{}'.format(x[i, 0])
             value = x[i, 1:]
             store.put(key, value, wb=wb, dtype=np.float32)
     del(temp_df)
