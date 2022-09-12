@@ -28,7 +28,7 @@ def main(args, path_db='./data/feat_store.db'):
     uid_cols = ['MessageId', 'Timestamp', 'UETR', 'Sender', 'Receiver', 'OrderingAccount', 'BeneficiaryAccount', 'Label', 'OrderingOriginAdd', 'BeneficiaryOriginAdd']
 
     # Train
-    df = pd.read_parquet(args.data_path + args.train_feat_path)
+    df = pd.read_csv(args.data_path + args.train_feat_path)
     feature_cols = list(df.columns)
     for i in uid_cols:
         feature_cols.remove(i)
@@ -43,7 +43,7 @@ def main(args, path_db='./data/feat_store.db'):
     gc.collect()
 
     # Test
-    df = pd.read_parquet(args.data_path + args.test_feat_path)
+    df = pd.read_csv(args.data_path + args.test_feat_path)
     feature_cols = list(df.columns)
     for i in uid_cols:
         feature_cols.remove(i)
@@ -58,7 +58,7 @@ def main(args, path_db='./data/feat_store.db'):
     gc.collect()
 
     # Bank
-    df = pd.read_parquet(args.data_path + args.bank_path)
+    df = pd.read_csv(args.data_path + args.bank_path)
     feature_cols = list(df.columns)
     df['id'] = np.arange(df.shape[0])
     temp_df = df[['id'] + feature_cols]
@@ -72,7 +72,7 @@ def main(args, path_db='./data/feat_store.db'):
     gc.collect()
 
     # Acc
-    df = pd.read_parquet(args.data_path + args.acc_path)
+    df = pd.read_csv(args.data_path + args.acc_path)
     feature_cols = list(df.columns)
     df['id'] = np.arange(df.shape[0])
     temp_df = df[['id'] + feature_cols]
@@ -86,7 +86,7 @@ def main(args, path_db='./data/feat_store.db'):
     gc.collect()
 
     # Add
-    df = pd.read_parquet(args.data_path + args.add_path)
+    df = pd.read_csv(args.data_path + args.add_path)
     feature_cols = list(df.columns)
     df['id'] = np.arange(df.shape[0])
     temp_df = df[['id'] + feature_cols]
