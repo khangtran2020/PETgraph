@@ -215,8 +215,8 @@ def main(args):
 
         logger.info('Len dl train %d, valid %d, test %d.',
                     len(dl_train), len(dl_valid), len(dl_test))
-        for _ in tqdm.tqdm(dl_test, desc='gen-test-dl', ncols=80):
-            pass
+        # for _ in tqdm.tqdm(dl_test, desc='gen-test-dl', ncols=80):
+        #     pass
 
         num_node_type = len(g.node_type_encode)
         num_edge_type = len(g.edge_type_encode)
