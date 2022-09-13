@@ -180,12 +180,12 @@ def main(args):
             test_range = set(t for t in times
                              if t is not None and t > times_valid_test_split)
         else:
-            train_range = set(range(1,19))
-            valid_range = set(range(19,24))
+            train_range = set(range(15,22))
+            valid_range = set(range(22,24))
             test_range = set(range(24,31))
         logger.info('Range Train %s\t Valid %s\t Test %s',
                     train_range, valid_range, test_range)
-        print(g.get_seed_nodes(train_range)[0])
+        # print(g.get_seed_nodes(train_range)[0])
         x0 = store.get(g.get_seed_nodes(train_range)[0], None)
         assert x0 is not None
         num_feat = x0.shape[0]
