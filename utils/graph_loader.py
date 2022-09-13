@@ -210,7 +210,7 @@ class NaiveHetDataLoader(object):
 
     def get_sage_neighbor_sampler(self, seeds):
         from torch_geometric.data.sampler import NeighborSampler
-        from sampler import DegreeWeightedNeighborSampler
+        from utils.sampler import DegreeWeightedNeighborSampler
         g = self.g
         g.node_type_encode
         edge_index = g.edge_list_encoded
