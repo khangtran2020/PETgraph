@@ -41,7 +41,7 @@ def create_naive_het_graph_from_edges(df):
     logger.setLevel(logging.INFO)
 
     with timeit(logger, 'node-type-init'):
-        view = df[['MessageId', 'hour']].drop_duplicates()
+        view = df[['MessageId', 'Hour']].drop_duplicates()
         node_ts = dict((k, v) for k, v in view.itertuples(index=False))
         df['src_type'] = 1
         view = df[['MessageId', 'src_type']].drop_duplicates()

@@ -110,7 +110,7 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
          optimizer='adamw', clip=0.25,
          n_batch=32, max_epochs=10, patience=8,
          seed_epoch=False, num_workers=0,
-         seed=2020, debug=False, continue_training=False):
+         seed=2020, debug=True, continue_training=False):
     """
     :param path_g:          path of graph file
     :param path_feat_db:    path of feature store db
@@ -173,13 +173,13 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
             df_edges['seed'] = 1
         with timeit(logger, 'g-init'):
             g = create_naive_het_graph_from_edges(df_edges)
-        print(g)
-        exit()
+        # print(g)
+        # exit()
 
         seed_set = set(df_edges.query('seed>0')['src'])
         logger.info('#seed %d', len(seed_set))
 
-        times = pd.Series(df_edges['ts'].unique())
+        times = pd.Series(df_edges['Hour'].unique())
         times_train_valid_split = times.quantile(0.7)
         times_valid_test_split = times.quantile(0.9)
         train_range = set(t for t in times
