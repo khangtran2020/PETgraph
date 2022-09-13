@@ -137,7 +137,7 @@ def main(args):
         width=args.width, depth=args.depth,
         n_hid=args.n_hid, n_heads=args.n_heads, n_layers=args.n_layers, dropout=args.drop_out,
         conv_name=args.conv_name, optimizer=str(args.optimizer), clip=args.clip,
-        max_epochs=args.n_step, patience=args.patience,
+        max_epochs=args.n_step, patience=args.patient,
         seed=args.seed, path_g=args.path_g,
         sample_method=args.sample_method, path_feat_db=args.path_feat_db,
     )
@@ -394,7 +394,7 @@ def main(args):
         def score_function(engine):
             return engine.state.metrics['auc']
 
-        handler = EarlyStopping(patience=args.patience, score_function=score_function, trainer=trainer)
+        handler = EarlyStopping(patience=args.patient, score_function=score_function, trainer=trainer)
         evaluator.add_event_handler(Events.COMPLETED, handler)
 
         cp = ModelCheckpoint(args.dir_model, f'model-{args.conv_name}-{args.seed}', n_saved=1,
