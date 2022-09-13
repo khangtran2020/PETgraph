@@ -192,6 +192,7 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
                     train_range, valid_range, test_range)
 
         x0 = store.get(0)
+        print(x0)
         assert x0 is not None
         num_feat = x0.shape[0]
 
