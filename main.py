@@ -159,7 +159,7 @@ def main(args):
             df_edges = pd.read_csv(args.path_g)
         if args.debug:
             logger.info('Main in debug mode.')
-            df_edges = df_edges.iloc[:100000]
+            df_edges = df_edges.iloc[3079964:]
         if 'seed' not in df_edges:
             df_edges['seed'] = 1
         with timeit(logger, 'g-init'):
@@ -170,17 +170,11 @@ def main(args):
         seed_set = set(df_edges.query('seed>0')['MessageId'])
         logger.info('#seed %d', len(seed_set))
         if args.debug:
-            times = pd.Series(df_edges['Days'].unique())
-            times_train_valid_split = times.quantile(0.7)
-            times_valid_test_split = times.quantile(0.9)
-            train_range = set(t for t in times
-                              if t is not None and t <= times_train_valid_split)
-            valid_range = set(t for t in times
-                              if t is not None and times_train_valid_split < t <= times_valid_test_split)
-            test_range = set(t for t in times
-                             if t is not None and t > times_valid_test_split)
+            train_range = set(range(15, 22))
+            valid_range = set(range(22, 24))
+            test_range = set(range(24, 31))
         else:
-            train_range = set(range(15,22))
+            train_range = set(range(1,22))
             valid_range = set(range(22,24))
             test_range = set(range(24,31))
         logger.info('Range Train %s\t Valid %s\t Test %s',
