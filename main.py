@@ -110,7 +110,7 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
          optimizer='adamw', clip=0.25,
          n_batch=32, max_epochs=10, patience=8,
          seed_epoch=False, num_workers=0,
-         seed=2020, debug=True, continue_training=False):
+         seed=2020, debug=False, continue_training=False):
     """
     :param path_g:          path of graph file
     :param path_feat_db:    path of feature store db
