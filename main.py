@@ -176,7 +176,7 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         # print(g)
         # exit()
 
-        seed_set = set(df_edges.query('seed>0')['src'])
+        seed_set = set(df_edges.query('seed>0')['MessageId'])
         logger.info('#seed %d', len(seed_set))
 
         times = pd.Series(df_edges['Hour'].unique())
