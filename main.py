@@ -135,7 +135,7 @@ def main(args):
     stats = dict(
         batch_size=args.batch_size,
         width=args.width, depth=args.depth,
-        n_hid=args.n_hid, n_heads=args.n_heads, n_layers=args.n_layers, dropout=args.dropout,
+        n_hid=args.n_hid, n_heads=args.n_heads, n_layers=args.n_layers, dropout=args.drop_out,
         conv_name=args.conv_name, optimizer=str(args.optimizer), clip=args.clip,
         max_epochs=args.n_step, patience=args.patience,
         seed=args.seed, path_g=args.path_g,
@@ -222,7 +222,7 @@ def main(args):
                 gnn = GNN(conv_name=args.conv_name,
                           n_in=num_feat,
                           n_hid=args.n_hid, n_heads=args.n_heads, n_layers=args.n_layers,
-                          dropout=args.dropout,
+                          dropout=args.drop_out,
                           num_node_type=num_node_type,
                           num_edge_type=num_edge_type
                           )
