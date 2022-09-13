@@ -79,7 +79,7 @@ def prepare_batch(batch, ts_range, fstore, default_feature,
         -1 if e not in encoded_seeds else g.seed_label_encoded[e]
         for e in encoded_ids
     ])
-    assert (y >= 0).sum() == len(encoded_seeds)
+    # assert (y >= 0).sum() == len(encoded_seeds)
 
     y = torch.LongTensor(y)
     y = convert_tensor(y, device=device, non_blocking=non_blocking)
