@@ -10,17 +10,12 @@ def add_general_group(group):
 
 
 def add_data_group(group):
-    group.add_argument('--data_path', type=str, default='data/', help="used dataset")
-    group.add_argument('--train_feat_path', type=str, default='processed_train.csv', help="Use embedding for LDP or not ")
-    group.add_argument('--test_feat_path', type=str, default='processed_test.csv',
-                       help="the directory used to save dataset")
-    group.add_argument('--acc_path', type=str, default='account_feature.csv',
-                       help="Use embedding for LDP or not ")
-    group.add_argument('--add_path', type=str, default='address_feature.csv',
-                       help="the directory used to save dataset")
-    group.add_argument('--bank_path', type=str, default='bank_feature.csv',
-                       help="the directory used to save dataset")
-
+    group.add_argument('--train_feat_path', type=str, default='data/processed_train.csv', help="Use embedding for LDP or not ")
+    group.add_argument('--test_feat_path', type=str, default='data/processed_test.csv',help="the directory used to save dataset")
+    group.add_argument('--acc_path', type=str, default='data/account_feature.csv',help="Use embedding for LDP or not ")
+    group.add_argument('--add_path', type=str, default='data/address_feature.csv',help="the directory used to save dataset")
+    group.add_argument('--bank_path', type=str, default='data/bank_feature.csv',help="the directory used to save dataset")
+    group.add_argument('--path_feat_db', type=str, default='data/feat_stor.db', help="the directory used to save dataset")
 
 def add_model_group(group):
     group.add_argument("--lr", type=float, default=0.01, help="learning rate")
@@ -39,6 +34,9 @@ def add_model_group(group):
     group.add_argument("--patient", type=int, default=8)
     group.add_argument("--continue_training", type=bool, default=False)
     group.add_argument("--debug", type=bool, default=False)
+    group.add_argument("--dir_model", type=str, default='model/')
+    group.add_argument("--num_worker", type=int, default=0)
+    group.add_argument("--path_result", type=str, default='results/exp_result.csv')
 
 def parse_args():
     parser = argparse.ArgumentParser()

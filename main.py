@@ -101,16 +101,7 @@ def prepare_batch(batch, ts_range, fstore, default_feature,
     return ((mask, x, edge_list, node_type, edge_type), y)
 
 
-def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_store.db', path_result='exp_result.csv',
-         dir_model='./model',
-         conv_name='gcn', sample_method='sage',
-         batch_size=(64, 16),
-         width=16, depth=6,
-         n_hid=400, n_heads=8, n_layers=6, dropout=0.2,
-         optimizer='adamw', clip=0.25,
-         n_batch=32, max_epochs=10, patience=8,
-         seed_epoch=False, num_workers=0,
-         seed=2020, debug=False, continue_training=False):
+def main(args):
     """
     :param path_g:          path of graph file
     :param path_feat_db:    path of feature store db
@@ -138,17 +129,17 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
     :return:
     """
 
-    if conv_name == '' or conv_name == 'logi':
+    if args.conv_name == '' or args.conv_name == 'logi':
         width, depth = 1, 1
 
     stats = dict(
-        batch_size=batch_size,
-        width=width, depth=depth,
-        n_hid=n_hid, n_heads=n_heads, n_layers=n_layers, dropout=dropout,
-        conv_name=conv_name, optimizer=str(optimizer), clip=clip,
-        max_epochs=max_epochs, patience=patience,
-        seed=seed, path_g=path_g,
-        sample_method=sample_method, path_feat_db=path_feat_db,
+        batch_size=args.batch_size,
+        width=args.width, depth=args.depth,
+        n_hid=args.n_hid, n_heads=args.n_heads, n_layers=args.n_layers, dropout=args.dropout,
+        conv_name=args.conv_name, optimizer=str(args.optimizer), clip=args.clip,
+        max_epochs=args.n_step, patience=args.patience,
+        seed=args.seed, path_g=args.path_g,
+        sample_method=args.sample_method, path_feat_db=args.path_feat_db,
     )
     logger.info('Param %s', stats)
 
@@ -157,16 +148,16 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
 
         with timeit(logger, 'fstore-init'):
             subprocess.check_call(
-                f'cp -r {path_feat_db} {path_feat_db_temp}',
+                f'cp -r {args.path_feat_db} {path_feat_db_temp}',
                 shell=True)
 
             store = FeatureStore(path_feat_db_temp)
 
-        if not os.path.isdir(dir_model):
-            os.makedirs(dir_model)
+        if not os.path.isdir(args.dir_model):
+            os.makedirs(args.dir_model)
         with timeit(logger, 'edge-load'):
-            df_edges = pd.read_csv(path_g)
-        if debug:
+            df_edges = pd.read_csv(args.path_g)
+        if args.debug:
             logger.info('Main in debug mode.')
             df_edges = df_edges.iloc[:10000]
         if 'seed' not in df_edges:
@@ -179,15 +170,12 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         seed_set = set(df_edges.query('seed>0')['MessageId'])
         logger.info('#seed %d', len(seed_set))
 
-        times = pd.Series(df_edges['Hour'].unique())
-        times_train_valid_split = times.quantile(0.7)
-        times_valid_test_split = times.quantile(0.9)
-        train_range = set(t for t in times
-                          if t is not None and t <= times_train_valid_split)
-        valid_range = set(t for t in times
-                          if t is not None and times_train_valid_split < t <= times_valid_test_split)
-        test_range = set(t for t in times
-                         if t is not None and t > times_valid_test_split)
+        # times = pd.Series(df_edges['Days'].unique())
+        # times_train_valid_split = times.quantile(0.7)
+        # times_valid_test_split = times.quantile(0.9)
+        train_range = set(range(1,19))
+        valid_range = set(range(19,24))
+        test_range = set(range(24,31))
         logger.info('Range Train %s\t Valid %s\t Test %s',
                     train_range, valid_range, test_range)
         print(g.get_seed_nodes(train_range)[0])
@@ -195,27 +183,27 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         assert x0 is not None
         num_feat = x0.shape[0]
 
-        np.random.seed(seed)
-        torch.manual_seed(seed)
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
 
         dl_train = NaiveHetDataLoader(
             width=width, depth=depth,
-            g=g, ts_range=train_range, method=sample_method,
-            batch_size=batch_size, n_batch=n_batch,
-            seed_epoch=seed_epoch, num_workers=num_workers, shuffle=True)
+            g=g, ts_range=train_range, method=args.sample_method,
+            batch_size=args.batch_size, n_batch=args.n_batch,
+            seed_epoch=args.seed_epoch, num_workers=args.num_workers, shuffle=True)
 
         dl_valid = NaiveHetDataLoader(
             width=width, depth=depth,
-            g=g, ts_range=valid_range, method=sample_method,
-            batch_size=batch_size, n_batch=n_batch,
-            seed_epoch=True, num_workers=num_workers, shuffle=False,
+            g=g, ts_range=valid_range, method=args.sample_method,
+            batch_size=args.batch_size, n_batch=args.n_batch,
+            seed_epoch=True, num_workers=args.num_workers, shuffle=False,
             cache_result=True)
 
         dl_test = NaiveHetDataLoader(
             width=width, depth=depth,
-            g=g, ts_range=test_range, method=sample_method,
-            batch_size=batch_size, n_batch=n_batch,
-            seed_epoch=True, num_workers=num_workers, shuffle=False,
+            g=g, ts_range=test_range, method=args.sample_method,
+            batch_size=args.batch_size, n_batch=args.n_batch,
+            seed_epoch=True, num_workers=args.num_workers, shuffle=False,
             cache_result=True)
 
         logger.info('Len dl train %d, valid %d, test %d.',
@@ -227,26 +215,26 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         num_edge_type = len(g.edge_type_encode)
         logger.info('#node_type %d, #edge_type %d', num_node_type, num_edge_type)
 
-        if conv_name != 'logi':
-            if conv_name == '':
+        if args.conv_name != 'logi':
+            if args.conv_name == '':
                 gnn = None
             else:
-                gnn = GNN(conv_name=conv_name,
+                gnn = GNN(conv_name=args.conv_name,
                           n_in=num_feat,
-                          n_hid=n_hid, n_heads=n_heads, n_layers=n_layers,
-                          dropout=dropout,
+                          n_hid=args.n_hid, n_heads=args.n_heads, n_layers=args.n_layers,
+                          dropout=args.dropout,
                           num_node_type=num_node_type,
                           num_edge_type=num_edge_type
                           )
 
-            model = Net(gnn, num_feat, num_embed=n_hid, n_hidden=n_hid)
+            model = Net(gnn, num_feat, num_embed=args.n_hid, n_hidden=args.n_hid)
         else:
             model = NetLogi(num_feat)
         model.to(device)
 
         model_loaded = False
-        if continue_training:
-            files = glob.glob(f'{dir_model}/model-{conv_name}-{seed}*')
+        if args.continue_training:
+            files = glob.glob(f'{args.dir_model}/model-{args.conv_name}-{args.seed}*')
             if len(files) > 0:
                 files.sort(key=os.path.getmtime)
                 load_file = files[-1]
@@ -254,13 +242,13 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
                 model.load_state_dict(torch.load(load_file))
                 model_loaded = True
 
-        if optimizer == 'adamw':
+        if args.optimizer == 'adamw':
             optimizer = torch.optim.AdamW(model.parameters())
-        elif optimizer == 'adam':
+        elif args.optimizer == 'adam':
             optimizer = torch.optim.Adam(model.parameters())
-        elif optimizer == 'sgd':
+        elif args.optimizer == 'sgd':
             optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-        elif optimizer == 'adagrad':
+        elif args.optimizer == 'adagrad':
             optimizer = torch.optim.Adagrad(model.parameters())
 
         pb = partial(
@@ -352,7 +340,7 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         scheduler = CosineAnnealingScheduler(
             optimizer, 'lr',
             start_value=0.05, end_value=1e-4,
-            cycle_size=len(dl_train) * max_epochs)
+            cycle_size=len(dl_train) * args.n_step)
         trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
 
         pbar_train = tqdm.tqdm(desc='train', total=len(dl_train), ncols=100)
@@ -406,16 +394,16 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         def score_function(engine):
             return engine.state.metrics['auc']
 
-        handler = EarlyStopping(patience=patience, score_function=score_function, trainer=trainer)
+        handler = EarlyStopping(patience=args.patience, score_function=score_function, trainer=trainer)
         evaluator.add_event_handler(Events.COMPLETED, handler)
 
-        cp = ModelCheckpoint(dir_model, f'model-{conv_name}-{seed}', n_saved=1,
+        cp = ModelCheckpoint(args.dir_model, f'model-{args.conv_name}-{args.seed}', n_saved=1,
                              create_dir=True,
                              score_function=lambda e: evaluator.state.metrics['auc'],
                              require_empty=False)
-        trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {conv_name: model})
+        trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {args.conv_name: model})
 
-        trainer.run(dl_train, max_epochs=max_epochs)
+        trainer.run(dl_train, max_epochs=args.n_step)
 
         path_model = cp.last_checkpoint
         model.load_state_dict(torch.load(path_model))
@@ -434,12 +422,12 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         stats['epoch'] = trainer.state.epoch,
 
         row = pd.DataFrame([stats])
-        if os.path.exists(path_result):
-            result = pd.read_csv(path_result)
+        if os.path.exists(args.path_result):
+            result = pd.read_csv(args.path_result)
         else:
             result = pd.DataFrame()
         result = result.append(row)
-        result.to_csv(path_result, index=False)
+        result.to_csv(args.path_result, index=False)
 
 
 if __name__ == '__main__':
