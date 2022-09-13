@@ -159,7 +159,7 @@ def main(args):
             df_edges = pd.read_csv(args.path_g)
         if args.debug:
             logger.info('Main in debug mode.')
-            df_edges = df_edges.iloc[:10000]
+            df_edges = df_edges.iloc[:100000]
         if 'seed' not in df_edges:
             df_edges['seed'] = 1
         with timeit(logger, 'g-init'):
