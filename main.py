@@ -130,7 +130,7 @@ def main(args):
     """
 
     if args.conv_name == '' or args.conv_name == 'logi':
-        width, depth = 1, 1
+        args.width, args.depth = 1, 1
 
     stats = dict(
         batch_size=args.batch_size,
@@ -187,20 +187,20 @@ def main(args):
         torch.manual_seed(args.seed)
 
         dl_train = NaiveHetDataLoader(
-            width=width, depth=depth,
+            width=args.width, depth=args.depth,
             g=g, ts_range=train_range, method=args.sample_method,
             batch_size=args.batch_size, n_batch=args.n_batch,
             seed_epoch=args.seed_epoch, num_workers=args.num_workers, shuffle=True)
 
         dl_valid = NaiveHetDataLoader(
-            width=width, depth=depth,
+            width=args.width, depth=args.depth,
             g=g, ts_range=valid_range, method=args.sample_method,
             batch_size=args.batch_size, n_batch=args.n_batch,
             seed_epoch=True, num_workers=args.num_workers, shuffle=False,
             cache_result=True)
 
         dl_test = NaiveHetDataLoader(
-            width=width, depth=depth,
+            width=args.width, depth=args.depth,
             g=g, ts_range=test_range, method=args.sample_method,
             batch_size=args.batch_size, n_batch=args.n_batch,
             seed_epoch=True, num_workers=args.num_workers, shuffle=False,
