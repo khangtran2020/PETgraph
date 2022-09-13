@@ -28,6 +28,7 @@ class FeatureStore(object):
         obj.put(self._key(key), value.tobytes())
 
     def get(self, key, default_value, dtype=np.float32):
+        key = float(key)
         rval = self.db.get(self._key(key))
         if rval is None:
             return default_value

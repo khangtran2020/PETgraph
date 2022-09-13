@@ -191,7 +191,7 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         logger.info('Range Train %s\t Valid %s\t Test %s',
                     train_range, valid_range, test_range)
         print(g.get_seed_nodes(train_range)[0])
-        x0 = store.get(float(g.get_seed_nodes(train_range)[0]), None)
+        x0 = store.get(g.get_seed_nodes(train_range)[0], None)
         assert x0 is not None
         num_feat = x0.shape[0]
 
