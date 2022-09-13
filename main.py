@@ -100,7 +100,7 @@ def prepare_batch(batch, ts_range, fstore, default_feature,
     return ((mask, x, edge_list, node_type, edge_type), y)
 
 
-def main(path_g, path_feat_db='data/store.db', path_result='exp_result.csv',
+def main(path_g, path_feat_db='data/feat_store.db', path_result='exp_result.csv',
          dir_model='./model',
          conv_name='gcn', sample_method='sage',
          batch_size=(64, 16),
