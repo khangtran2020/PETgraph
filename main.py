@@ -165,7 +165,7 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
         if not os.path.isdir(dir_model):
             os.makedirs(dir_model)
         with timeit(logger, 'edge-load'):
-            df_edges = pd.read_parquet(path_g)
+            df_edges = pd.read_csv(path_g)
         if debug:
             logger.info('Main in debug mode.')
             df_edges = df_edges.iloc[:10000]
