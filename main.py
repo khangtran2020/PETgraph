@@ -190,10 +190,9 @@ def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_stor
                          if t is not None and t > times_valid_test_split)
         logger.info('Range Train %s\t Valid %s\t Test %s',
                     train_range, valid_range, test_range)
-
-        x0 = store.get(0, None)
-        print(x0)
-        assert x0 is not None
+        print(g.get_seed_nodes(train_range)[0])
+        x0 = store.get(g.get_seed_nodes(train_range)[0], None)
+        # assert x0 is not None
         num_feat = x0.shape[0]
 
         np.random.seed(seed)
