@@ -15,7 +15,7 @@ def add_data_group(group):
     group.add_argument('--acc_path', type=str, default='data/account_feature.csv',help="Use embedding for LDP or not ")
     group.add_argument('--add_path', type=str, default='data/address_feature.csv',help="the directory used to save dataset")
     group.add_argument('--bank_path', type=str, default='data/bank_feature.csv',help="the directory used to save dataset")
-    group.add_argument('--path_feat_db', type=str, default='data/feat_stor.db', help="the directory used to save dataset")
+    group.add_argument('--path_feat_db', type=str, default='data/feat_store.db', help="the directory used to save dataset")
     group.add_argument('--path_g', type=str, default='data/full_graph.csv', help="the directory used to save dataset")
 
 def add_model_group(group):
