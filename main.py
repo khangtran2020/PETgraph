@@ -16,6 +16,7 @@ import tempfile
 import subprocess
 from functools import partial
 import glob
+from config import parse_args
 
 logging.basicConfig(format='%(asctime)s | %(levelname)s | %(name)s | %(message)s')
 logger = logging.getLogger('exp')
@@ -100,7 +101,7 @@ def prepare_batch(batch, ts_range, fstore, default_feature,
     return ((mask, x, edge_list, node_type, edge_type), y)
 
 
-def main(path_g, path_feat_db='data/feat_store.db', path_result='exp_result.csv',
+def main(args, path_g = 'data/processed_train.csv', path_feat_db='data/feat_store.db', path_result='exp_result.csv',
          dir_model='./model',
          conv_name='gcn', sample_method='sage',
          batch_size=(64, 16),
@@ -442,4 +443,5 @@ def main(path_g, path_feat_db='data/feat_store.db', path_result='exp_result.csv'
 
 
 if __name__ == '__main__':
-    fire.Fire(main)
+    args = parse_args()
+    main(args=args)
