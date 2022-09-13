@@ -39,7 +39,7 @@ def add_model_group(group):
     group.add_argument("--continue_training", type=bool, default=False)
     group.add_argument("--debug", type=bool, default=False)
     group.add_argument("--dir_model", type=str, default='model/')
-    group.add_argument("--num_worker", type=int, default=0)
+    group.add_argument("--num_workers", type=int, default=0)
     group.add_argument("--path_result", type=str, default='results/exp_result.csv')
 
 def parse_args():
