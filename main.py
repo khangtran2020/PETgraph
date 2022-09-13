@@ -169,13 +169,20 @@ def main(args):
 
         seed_set = set(df_edges.query('seed>0')['MessageId'])
         logger.info('#seed %d', len(seed_set))
-
-        # times = pd.Series(df_edges['Days'].unique())
-        # times_train_valid_split = times.quantile(0.7)
-        # times_valid_test_split = times.quantile(0.9)
-        train_range = set(range(1,19))
-        valid_range = set(range(19,24))
-        test_range = set(range(24,31))
+        if args.debug:
+            times = pd.Series(df_edges['Days'].unique())
+            times_train_valid_split = times.quantile(0.7)
+            times_valid_test_split = times.quantile(0.9)
+            train_range = set(t for t in times
+                              if t is not None and t <= times_train_valid_split)
+            valid_range = set(t for t in times
+                              if t is not None and times_train_valid_split < t <= times_valid_test_split)
+            test_range = set(t for t in times
+                             if t is not None and t > times_valid_test_split)
+        else:
+            train_range = set(range(1,19))
+            valid_range = set(range(19,24))
+            test_range = set(range(24,31))
         logger.info('Range Train %s\t Valid %s\t Test %s',
                     train_range, valid_range, test_range)
         print(g.get_seed_nodes(train_range)[0])
