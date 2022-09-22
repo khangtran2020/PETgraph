@@ -49,6 +49,7 @@ from utils.utils import timeit
 
 mem = joblib.Memory('./data/cache')
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(device)
 
 create_naive_het_graph_from_edges = mem.cache(_create_naive_het_graph_from_edges)
 
