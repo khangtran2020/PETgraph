@@ -22,7 +22,7 @@ def add_data_group(group):
 def add_model_group(group):
     group.add_argument("--lr", type=float, default=0.01, help="learning rate")
     group.add_argument("--wd", type=float, default=1e-3, help="weight decay")
-    group.add_argument("--conv_name", type=str, default='gcn', help="embedding dim")
+    group.add_argument("--conv_name", type=str, default='het-emb', help="embedding dim")
     group.add_argument('--sample_method', type=str, default='sage')
     group.add_argument('--width', type=int, default=16, help='print every x epoch')
     group.add_argument('--depth', type=int, default=6, help='print every x epoch')
