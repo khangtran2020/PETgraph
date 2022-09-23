@@ -435,4 +435,5 @@ def main(args):
 if __name__ == '__main__':
     args = parse_args()
     args.batch_size = (args.batch_size_0, args.batch_size_1)
+    print(args.batch_size)
     main(args=args)
