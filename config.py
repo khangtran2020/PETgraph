@@ -26,7 +26,7 @@ def add_model_group(group):
     group.add_argument('--sample_method', type=str, default='sage')
     group.add_argument('--width', type=int, default=16, help='print every x epoch')
     group.add_argument('--depth', type=int, default=6, help='print every x epoch')
-    group.add_argument('--batch_size', type=tuple, default=(64,16), help="print training details")
+    group.add_argument('--batch_size', type=str, default='(64,16)', help="print training details")
     group.add_argument('--n_hid', type=int, default=400, help='print every x epoch')
     group.add_argument('--n_heads', type=int, default=8, help='evaluate every x epoch')
     group.add_argument('--n_layers', type=int, default=6)

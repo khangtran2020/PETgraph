@@ -434,4 +434,6 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
+    res = tuple(int(num) for num in args.batch_size.replace('(', '').replace(')', '').replace('...', '').split(', '))
+    args.batch_size = res
     main(args=args)
