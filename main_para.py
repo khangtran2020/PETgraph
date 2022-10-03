@@ -136,7 +136,7 @@ def train(gpu, args, graph):
     print("Begin training process")
     rank = args.nr * args.gpus + gpu
     print("Current rank is: {}".format(rank))
-    dist.init_process_group(backend='nccl', init_method='env://', world_size=args.world_size, rank=rank)
+    dist.init_process_group(init_method='tcp://10.1.1.20:23456', world_size=args.world_size, rank=rank)
     torch.manual_seed(0)
     print("Begin load data")
     dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=args.world_size, args=args, graph=graph)
@@ -236,18 +236,7 @@ def main():
         args.num_feat = num_feat
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
-        n = torch.cuda.device_count()
-        processes = []
-        devices = [f'{i}' for i in range(n)]
-        mp.set_start_method('spawn', force=True)
-        start_id = args.nr * args.gpus
-        for i in range(start_id, min(start_id + args.parts_per_node, args.n_partitions)):
-            os.environ['CUDA_VISIBLE_DEVICES'] = devices[i % len(devices)]
-            p = mp.Process(target=train, args=(i, args, g))
-            p.start()
-            processes.append(p)
-        for p in processes:
-            p.join()
+        mp.spawn(train, nprocs=args.gpus, args=(args, g)) #, store, np.zeros_like(x0)))
 
 
 if __name__ == "__main__":
