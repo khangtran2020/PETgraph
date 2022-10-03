@@ -135,9 +135,12 @@ def prepare_optimizer(args, model):
 def train(gpu, args, graph):
     print("Begin training process")
     rank = args.nr * args.gpus + gpu
+    print("Current rank is: {}".format(rank))
     dist.init_process_group(backend='nccl', init_method='env://', world_size=args.world_size, rank=rank)
     torch.manual_seed(0)
+    print("Begin load data")
     dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=args.world_size, args=args, graph=graph)
+    print("Done load data")
     model = prepare_model(args=args)
     torch.cuda.set_device(gpu)
     model.cuda(gpu)
