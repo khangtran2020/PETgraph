@@ -173,7 +173,7 @@ def train(gpu, args, graph, store, default_feat):
 def main():
     args = parse_args()
     args.batch_size = (args.batch_size_0, args.batch_size_1)
-    args.world_size = args.gpus * args.nodes
+    args.world_size = args.gpus
     os.environ['MASTER_ADDR'] = '10.57.23.164'
     os.environ['MASTER_PORT'] = '8888'
     if args.conv_name == '' or args.conv_name == 'logi':
