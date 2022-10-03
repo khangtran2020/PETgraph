@@ -136,7 +136,7 @@ def train(gpu, args, graph):
     print("Begin training process")
     rank = args.nr * args.gpus + gpu
     print("Current rank is: {}".format(rank))
-    dist.init_process_group(world_size=args.world_size, rank=rank)
+    dist.init_process_group(backend='nccl', world_size=args.world_size, rank=rank)
     torch.manual_seed(0)
     print("Begin load data")
     dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=args.world_size, args=args, graph=graph)
