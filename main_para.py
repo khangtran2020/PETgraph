@@ -236,7 +236,18 @@ def main():
         args.num_feat = num_feat
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
-        mp.spawn(train, nprocs=args.gpus, args=(args, g)) #, store, np.zeros_like(x0)))
+        n = torch.cuda.device_count()
+        processes = []
+        devices = [f'{i}' for i in range(n)]
+        mp.set_start_method('spawn', force=True)
+        start_id = args.nr * args.gpus
+        for i in range(start_id, min(start_id + args.parts_per_node, args.n_partitions)):
+            os.environ['CUDA_VISIBLE_DEVICES'] = devices[i % len(devices)]
+            p = mp.Process(target=train, args=(i, args, g))
+            p.start()
+            processes.append(p)
+        for p in processes:
+            p.join()
 
 
 if __name__ == "__main__":
