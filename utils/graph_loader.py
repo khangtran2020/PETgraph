@@ -265,7 +265,7 @@ class NaiveHetDataLoader(object):
 class ParallelHetDataLoader(object):
     logger = logging.getLogger('native-het-dl')
 
-    def __init__(self, rank: int, world_size: int, width: Union[int, List], depth: int,
+    def __init__(self, rank: int, world_size: int, store, default_feat, width: Union[int, List], depth: int,
                  g: NaiveHetGraph, ts_range: Set, batch_size: int, n_batch: int, seed_epoch: bool,
                  shuffle: bool, num_workers: int, method: str, cache_result: bool = False, pin_memory: bool = False,
                  seed: int = 0):
@@ -296,6 +296,8 @@ class ParallelHetDataLoader(object):
         self.world_size = world_size
         self.pin_memory = pin_memory
         self.seed = seed
+        self.store = store
+        self.default_feat = default_feat
 
     @property
     @lru_cache()
@@ -336,6 +338,45 @@ class ParallelHetDataLoader(object):
             raise NotImplementedError(
                 'unknown sampling method %s' % self.method)
 
+    def prepare_batch(self, batch, ts_range, fstore, default_feature,
+                      g: NaiveHetGraph, non_blocking=False):
+        encoded_seeds, encoded_ids, edge_ids = batch
+        encoded_seeds = set(encoded_seeds)
+        encode_to_new = dict((e, i) for i, e in enumerate(encoded_ids))
+        mask = np.asarray([e in encoded_seeds for e in encoded_ids])
+        decoded_ids = [g.node_decode[e] for e in encoded_ids]
+
+        x = np.asarray([
+            fstore.get(e, default_feature) for e in decoded_ids
+        ])
+        x = torch.FloatTensor(x).cuda(non_blocking=non_blocking)
+        edge_list = [g.edge_list_encoded[:, idx] for idx in edge_ids]
+        f = lambda x: encode_to_new[x]
+        f = np.vectorize(f)
+        edge_list = [f(e) for e in edge_list]
+        edge_list = [torch.LongTensor(e).cuda(non_blocking=non_blocking) for e in edge_list]
+        y = np.asarray([
+            -1 if e not in encoded_seeds else g.seed_label_encoded[e]
+            for e in encoded_ids
+        ])
+        # assert (y >= 0).sum() == len(encoded_seeds)
+
+        y = torch.LongTensor(y)
+        y = y.cuda(non_blocking=non_blocking)
+        mask = torch.BoolTensor(mask)
+        mask = mask.cuda(non_blocking=non_blocking)
+        y = y[mask]
+        node_type_encode = g.node_type_encode
+        node_type = [node_type_encode[g.node_type[e]] for e in decoded_ids]
+        node_type = torch.LongTensor(np.asarray(node_type))
+        node_type = node_type.cuda(non_blocking=non_blocking)
+
+        edge_type = [[g.edge_list_type_encoded[eid] for eid in list_] for list_ in edge_ids]
+        edge_type = [torch.LongTensor(np.asarray(e)) for e in edge_type]
+        edge_type = [e.cuda(non_blocking=non_blocking) for e in edge_type]
+
+        return ((mask, x, edge_list, node_type, edge_type), y)
+
     def iter_sage(self):
         if self.cache_result and self.cache and len(self.cache) == len(self):
             self.logger.info('DL loaded from cache')
@@ -362,9 +403,12 @@ class ParallelHetDataLoader(object):
                 encoded_node_ids = encoded_node_ids.cpu().numpy()
                 edge_ids = self.convert_sage_adjs_to_edge_ids(adjs)
                 encoded_seeds = encoded_seeds.numpy()
+                data = (encoded_seeds, encoded_node_ids, edge_ids)
+                x, y = self.prepare_batch(batch=data, ts_range=self.ts_range, fstore=self.store, default_feature=self.default_feat,
+                              g=g, non_blocking=True)
                 if self.cache_result:
-                    self.cache.append([encoded_seeds, encoded_node_ids, edge_ids])
-                yield encoded_seeds, encoded_node_ids, edge_ids
+                    self.cache.append((x, y))
+                yield x, y
 
     def __len__(self):
         return self.n_batch

@@ -132,7 +132,7 @@ def prepare_optimizer(args, model):
     return optimizer
 
 
-def train(gpu, args, graph, store, default_feat):
+def train(gpu, args, graph):
     rank = args.nr * args.gpus + gpu
     dist.init_process_group(backend='nccl', init_method='env://', world_size=args.world_size, rank=rank)
     torch.manual_seed(0)
@@ -153,8 +153,7 @@ def train(gpu, args, graph, store, default_feat):
     print("Train with num step for each epoch: {}".format(total_step))
     for epoch in range(args.epochs):
         for i, data in enumerate(dl_train):
-            x, y = prepare_batch(batch=data, ts_range=args.train_range, fstore=store, default_feature=default_feat,
-                                 g=graph, non_blocking=True)
+            x, y = data
             # Forward pass
             outputs = model(x)
             loss = criterion(outputs, y)
@@ -233,7 +232,7 @@ def main():
         args.num_feat = num_feat
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
-        mp.spawn(train, nprocs=args.gpus, args=(args, g, store, np.zeros_like(x0)))
+        mp.spawn(train, nprocs=args.gpus, args=(args, g)) #, store, np.zeros_like(x0)))
 
 
 if __name__ == "__main__":
