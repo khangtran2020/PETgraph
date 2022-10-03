@@ -2,6 +2,7 @@ import os
 import sys
 import time
 from contextlib import contextmanager
+
 path = "/".join([x for x in os.path.realpath(__file__).split('/')[:-2]])
 sys.path.insert(0, path)
 from typing import Tuple, Dict, List, Optional, Union, Set
@@ -17,13 +18,15 @@ from torch_geometric.data import Data as PygData
 
 import tqdm
 
+
 @contextmanager
 def timeit(logger, task):
     logger.info('Started task %s ...', task)
     t0 = time.time()
     yield
     t1 = time.time()
-    logger.info('Completed task %s - %.3f sec.', task, t1-t0)
+    logger.info('Completed task %s - %.3f sec.', task, t1 - t0)
+
 
 class NaiveHetGraph(object):
     logger = logging.getLogger('native-het-g')
@@ -171,6 +174,186 @@ class NaiveHetDataLoader(object):
             bz = sum(self.batch_size) if not self.seed_epoch else self.batch_size
             dl = DataLoader(
                 seeds_encoded, batch_size=bz, shuffle=self.shuffle)
+
+            if self.cache_result:
+                self.cache = []
+            for encoded_seeds in dl:
+                batch_size, encoded_node_ids, adjs = sampler.sample(encoded_seeds)
+                encoded_node_ids = encoded_node_ids.cpu().numpy()
+                edge_ids = self.convert_sage_adjs_to_edge_ids(adjs)
+                encoded_seeds = encoded_seeds.numpy()
+                if self.cache_result:
+                    self.cache.append([encoded_seeds, encoded_node_ids, edge_ids])
+                yield encoded_seeds, encoded_node_ids, edge_ids
+
+    def __len__(self):
+        return self.n_batch
+
+    def convert_sage_adjs_to_edge_ids(self, adjs):
+        from torch_geometric.data.sampler import Adj
+        if isinstance(adjs, Adj):
+            adjs = [adjs]
+
+        if '-merged' not in self.method:
+            return [a[1].cpu().numpy() for a in adjs]
+
+        e_ids = np.concatenate([a[1].cpu().numpy() for a in adjs])
+        e_ids = np.unique(e_ids)
+        return [e_ids]
+
+    @lru_cache()
+    def get_node_type_weight_tensor(self):
+        g = self.g
+        assert isinstance(g, NaiveHetGraph)
+        node_types = np.asarray([g.node_type[g.node_decode[i]] for i in range(len(g.node_type))])
+        weight = dict(zip(*np.unique(node_types, return_counts=True)))
+        weight = dict((k, 1.0 / v) for k, v in weight.items())
+        rval = np.asarray([weight[k] for k in node_types])
+        return torch.FloatTensor(rval)
+
+    def get_sage_neighbor_sampler(self, seeds):
+        from torch_geometric.data.sampler import NeighborSampler
+        from utils.sampler import DegreeWeightedNeighborSampler
+        g = self.g
+        g.node_type_encode
+        edge_index = g.edge_list_encoded
+        edge_index = torch.LongTensor(edge_index)
+
+        node_idx = np.asarray([
+            g.node_encode[e] for e in seeds
+            if g.node_ts[e] in self.ts_range])
+
+        node_idx = torch.LongTensor(node_idx)
+
+        if self.method in {'sage', 'sage-merged'}:
+            return NeighborSampler(
+                sizes=self.width,
+                edge_index=edge_index,
+                node_idx=node_idx, num_nodes=len(g.node_type),
+                batch_size=sum(self.batch_size) if not self.seed_epoch else self.batch_size,
+                num_workers=self.num_workers,
+                shuffle=self.shuffle
+            )
+        elif self.method in {
+            'dw-sage', 'dw-sage-merged',
+            'dw0-ntw1-sage',
+            'dw1-ntw0-sage',
+        }:
+
+            if self.method == 'dw1-ntw0-sage':
+                weights = 1.0
+            else:
+                weights = self.get_node_type_weight_tensor()
+
+            if self.method == 'dw0-ntw1-sage':
+                enable_degree_weight = False
+            else:
+                enable_degree_weight = True
+            return DegreeWeightedNeighborSampler(
+                node_type_weights=weights,
+                enable_degree_weight=enable_degree_weight,
+                sizes=self.width,
+                edge_index=edge_index,
+                node_idx=node_idx, num_nodes=len(g.node_type),
+                batch_size=sum(self.batch_size) if not self.seed_epoch else self.batch_size,
+                num_workers=self.num_workers,
+                shuffle=self.shuffle,
+            )
+        raise NotImplementedError('unknown method %s' % self.method)
+
+
+class ParallelHetDataLoader(object):
+    logger = logging.getLogger('native-het-dl')
+
+    def __init__(self, rank: int, world_size: int, width: Union[int, List], depth: int,
+                 g: NaiveHetGraph, ts_range: Set, batch_size: int, n_batch: int, seed_epoch: bool,
+                 shuffle: bool, num_workers: int, method: str, cache_result: bool = False, pin_memory: bool = False,
+                 seed: int = 0):
+
+        self.g = g
+        self.ts_range = ts_range
+
+        if seed_epoch:
+            batch_size = sum(batch_size)
+            n_batch = int(np.ceil(len(self.seeds) / batch_size))
+        else:
+            assert len(batch_size) == len(self.label_seed)
+
+        self.seed_epoch = seed_epoch
+        self.batch_size = batch_size
+        self.n_batch = n_batch
+        self.shuffle = shuffle
+        self.num_workers = num_workers
+
+        self.depth = depth
+        self.width = width if isinstance(list, tuple) else [width] * depth
+        assert len(self.width) == depth
+
+        self.method = method
+        self.cache_result = cache_result
+        self.cache = None
+        self.rank = rank
+        self.world_size = world_size
+        self.pin_memory = pin_memory
+        self.seed = seed
+
+    @property
+    @lru_cache()
+    def seeds(self):
+        return self.g.get_seed_nodes(self.ts_range)
+
+    @property
+    @lru_cache()
+    def label_seed(self) -> Dict[int, int]:
+        seeds = set(self.seeds)
+        label_seed = defaultdict(list)
+        for sd, lbl in self.g.seed_label.items():
+            if sd in seeds:
+                label_seed[lbl].append(sd)
+        return label_seed
+
+    def sample_seeds(self) -> List:
+        if self.seed_epoch:
+            return self.g.get_seed_nodes(self.ts_range)
+
+        rval = []
+        lbl_sd = self.label_seed
+        for i, bz in enumerate(self.batch_size):
+            cands = lbl_sd[i]
+            rval.extend(
+                np.random.choice(
+                    cands, bz, replace=len(cands) < bz))
+        return rval
+
+    def __iter__(self):
+        import gc;
+        gc.collect()
+        if self.method in {'sage', 'sage-merged',
+                           'dw-sage', 'dw-sage-merged',
+                           'dw0-ntw1-sage', 'dw1-ntw0-sage'}:
+            yield from self.iter_sage()
+        else:
+            raise NotImplementedError(
+                'unknown sampling method %s' % self.method)
+
+    def iter_sage(self):
+        if self.cache_result and self.cache and len(self.cache) == len(self):
+            self.logger.info('DL loaded from cache')
+            for e in self.cache:
+                yield e
+        else:
+            from torch.utils.data import DataLoader
+            from torch.utils.data.distributed import DistributedSampler
+            g = self.g
+            seeds = self.sample_seeds()
+            seeds_encoded = [g.node_encode[e] for e in seeds]
+            neighbor_sampler = self.get_sage_neighbor_sampler(
+                seeds=seeds)
+            sampler = DistributedSampler(dataset=seeds_encoded, num_replicas=self.world_size, rank=self.rank,
+                                         shuffle=self.shuffle, seed=self.seed, drop_last=True)
+            bz = sum(self.batch_size) if not self.seed_epoch else self.batch_size
+            dl = DataLoader(seeds_encoded, batch_size=bz, shuffle=self.shuffle, pin_memory=self.pin_memory,
+                            sampler=sampler, num_workers=self.num_workers)
 
             if self.cache_result:
                 self.cache = []
