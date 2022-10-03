@@ -132,7 +132,7 @@ def prepare_optimizer(args, model):
     return optimizer
 
 
-def train(gpu, args, graph):
+def train(gpu, args, graph, store, default_feat):
     print("Begin training process")
     rank = args.nr * args.gpus + gpu
     print("Current rank is: {}".format(rank))
@@ -151,13 +151,13 @@ def train(gpu, args, graph):
     model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
     # Data loading code
 
-
     start = datetime.now()
     total_step = len(dl_train)
     print("Train with num step for each epoch: {}".format(total_step))
     for epoch in range(args.epochs):
         for i, data in enumerate(dl_train):
-            x, y = data
+            x, y = prepare_batch(batch=data, ts_range=args.train_range, fstore=store, default_feature=default_feat,
+                                 g=graph, non_blocking=True)
             # Forward pass
             outputs = model(x)
             loss = criterion(outputs, y)
@@ -222,9 +222,9 @@ def main():
             valid_range = set(range(22, 24))
             test_range = set(range(24, 31))
         else:
-            train_range = set(range(1,22))
-            valid_range = set(range(22,24))
-            test_range = set(range(24,31))
+            train_range = set(range(1, 22))
+            valid_range = set(range(22, 24))
+            test_range = set(range(24, 31))
         logger.info('Range Train %s\t Valid %s\t Test %s',
                     train_range, valid_range, test_range)
         # print(g.get_seed_nodes(train_range)[0])
@@ -234,9 +234,12 @@ def main():
         args.num_node_type = len(g.node_type_encode)
         args.num_edge_type = len(g.edge_type_encode)
         args.num_feat = num_feat
+        args.train_range = train_range
+        args.valid_range = valid_range
+        args.test_range = test_range
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
-        mp.spawn(train, nprocs=args.gpus, args=(args, g)) #, store, np.zeros_like(x0)))
+        mp.spawn(train, nprocs=args.gpus, args=(args, g, store, np.zeros_like(x0)))
 
 
 if __name__ == "__main__":
