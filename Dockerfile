@@ -39,3 +39,5 @@ RUN adduser --disabled-password --gecos '' newuser \
 WORKDIR /workspace/projects
 RUN chown newuser ./
 COPY ./ ./
+RUN mkdir results
+RUN mkdir model
