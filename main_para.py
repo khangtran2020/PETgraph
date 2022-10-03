@@ -136,7 +136,7 @@ def train(gpu, args, graph):
     print("Begin training process")
     rank = args.nr * args.gpus + gpu
     print("Current rank is: {}".format(rank))
-    dist.init_process_group(init_method='tcp://10.1.1.20:23456', world_size=args.world_size, rank=rank)
+    dist.init_process_group(world_size=args.world_size, rank=rank)
     torch.manual_seed(0)
     print("Begin load data")
     dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=args.world_size, args=args, graph=graph)
@@ -177,7 +177,7 @@ def main():
     args = parse_args()
     args.batch_size = (args.batch_size_0, args.batch_size_1)
     args.world_size = args.gpus
-    os.environ['MASTER_ADDR'] = '10.57.23.164'
+    os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '8888'
     if args.conv_name == '' or args.conv_name == 'logi':
         args.width, args.depth = 1, 1
