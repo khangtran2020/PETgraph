@@ -56,9 +56,10 @@ def prepare_data(rank, world_size, args, graph, pin_memory=False):
     return dl_train, dl_valid, dl_test
 
 
-def prepare_batch(batch, ts_range, fstore, default_feature,
+def prepare_batch(batch, ts_range, default_feature,
                   g: NaiveHetGraph, non_blocking=False):
     encoded_seeds, encoded_ids, edge_ids = batch
+    fstore = g.store
     encoded_seeds = set(encoded_seeds)
     encode_to_new = dict((e, i) for i, e in enumerate(encoded_ids))
     mask = np.asarray([e in encoded_seeds for e in encoded_ids])
@@ -179,6 +180,7 @@ def train(gpu, args, graph, default_feat):
 
 
 def main(args):
+    store = FeatureStore(args.path_feat_db)
     if not os.path.isdir(args.dir_model):
         os.makedirs(args.dir_model)
     with timeit(logger, 'edge-load'):
@@ -189,7 +191,7 @@ def main(args):
     if 'seed' not in df_edges:
         df_edges['seed'] = 1
     with timeit(logger, 'g-init'):
-        g = _create_naive_het_graph_from_edges(df_edges)
+        g = _create_naive_het_graph_from_edges(df_edges, store)
 
     seed_set = set(df_edges.query('seed>0')['MessageId'])
     logger.info('#seed %d', len(seed_set))
@@ -237,5 +239,4 @@ if __name__ == "__main__":
         sample_method=args.sample_method, path_feat_db=args.path_feat_db,
     )
     logger.info('Param %s', stats)
-    store = FeatureStore(args.path_feat_db)
     main(args)

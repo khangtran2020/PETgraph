@@ -9,6 +9,7 @@ from typing import Tuple, Dict, List, Optional, Union, Set
 from collections import defaultdict
 import logging
 from functools import lru_cache
+from utils.fstore import FeatureStore
 
 logging.basicConfig(level=logging.INFO)
 
@@ -32,13 +33,14 @@ class NaiveHetGraph(object):
     logger = logging.getLogger('native-het-g')
 
     def __init__(self, node_type: Dict[int, str], edge_list: Tuple[int, int, str],
-                 seed_label: Dict[int, int], node_ts: Dict[int, int]):
+                 seed_label: Dict[int, int], node_ts: Dict[int, int], feat_store: FeatureStore):
         self.logger.setLevel(logging.INFO)
         self.node_type = node_type
         self.node_type_encode = self.get_node_type_encoder(node_type)
 
         self.seed_label = seed_label
         self.node_ts = node_ts
+        self.store = feat_store
 
         with timeit(self.logger, 'node-enc-init'):
             self.node_encode = dict((n, i) for i, n in enumerate(node_type.keys()))
