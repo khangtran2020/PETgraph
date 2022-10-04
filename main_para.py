@@ -173,7 +173,47 @@ def train(gpu, args, graph, store, default_feat):
         print("Training complete in: " + str(datetime.now() - start))
 
 
-def main():
+def main(args):
+    if not os.path.isdir(args.dir_model):
+        os.makedirs(args.dir_model)
+    with timeit(logger, 'edge-load'):
+        df_edges = pd.read_csv(args.path_g)
+    if args.debug:
+        logger.info('Main in debug mode.')
+        df_edges = df_edges.iloc[-10000:]
+    if 'seed' not in df_edges:
+        df_edges['seed'] = 1
+    with timeit(logger, 'g-init'):
+        g = _create_naive_het_graph_from_edges(df_edges)
+
+    seed_set = set(df_edges.query('seed>0')['MessageId'])
+    logger.info('#seed %d', len(seed_set))
+    if args.debug:
+        train_range = set(range(15, 22))
+        valid_range = set(range(22, 24))
+        test_range = set(range(24, 31))
+    else:
+        train_range = set(range(1, 22))
+        valid_range = set(range(22, 24))
+        test_range = set(range(24, 31))
+    logger.info('Range Train %s\t Valid %s\t Test %s',
+                train_range, valid_range, test_range)
+    # print(g.get_seed_nodes(train_range)[0])
+    x0 = store.get(g.get_seed_nodes(train_range)[0], None)
+    assert x0 is not None
+    num_feat = x0.shape[0]
+    args.num_node_type = len(g.node_type_encode)
+    args.num_edge_type = len(g.edge_type_encode)
+    args.num_feat = num_feat
+    args.train_range = train_range
+    args.valid_range = valid_range
+    args.test_range = test_range
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    mp.spawn(train, nprocs=args.gpus, args=(args, g, store, np.zeros_like(x0)))
+
+
+if __name__ == "__main__":
     args = parse_args()
     args.batch_size = (args.batch_size_0, args.batch_size_1)
     args.world_size = args.gpus
@@ -192,55 +232,5 @@ def main():
         sample_method=args.sample_method, path_feat_db=args.path_feat_db,
     )
     logger.info('Param %s', stats)
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        path_feat_db_temp = f'{tmpdir}/store.db'
-
-        with timeit(logger, 'fstore-init'):
-            subprocess.check_call(
-                f'cp -r {args.path_feat_db} {path_feat_db_temp}',
-                shell=True)
-
-            store = FeatureStore(path_feat_db_temp)
-
-        if not os.path.isdir(args.dir_model):
-            os.makedirs(args.dir_model)
-        with timeit(logger, 'edge-load'):
-            df_edges = pd.read_csv(args.path_g)
-        if args.debug:
-            logger.info('Main in debug mode.')
-            df_edges = df_edges.iloc[-10000:]
-        if 'seed' not in df_edges:
-            df_edges['seed'] = 1
-        with timeit(logger, 'g-init'):
-            g = _create_naive_het_graph_from_edges(df_edges)
-
-        seed_set = set(df_edges.query('seed>0')['MessageId'])
-        logger.info('#seed %d', len(seed_set))
-        if args.debug:
-            train_range = set(range(15, 22))
-            valid_range = set(range(22, 24))
-            test_range = set(range(24, 31))
-        else:
-            train_range = set(range(1, 22))
-            valid_range = set(range(22, 24))
-            test_range = set(range(24, 31))
-        logger.info('Range Train %s\t Valid %s\t Test %s',
-                    train_range, valid_range, test_range)
-        # print(g.get_seed_nodes(train_range)[0])
-        x0 = store.get(g.get_seed_nodes(train_range)[0], None)
-        assert x0 is not None
-        num_feat = x0.shape[0]
-        args.num_node_type = len(g.node_type_encode)
-        args.num_edge_type = len(g.edge_type_encode)
-        args.num_feat = num_feat
-        args.train_range = train_range
-        args.valid_range = valid_range
-        args.test_range = test_range
-        np.random.seed(args.seed)
-        torch.manual_seed(args.seed)
-        mp.spawn(train, nprocs=args.gpus, args=(args, g, store, np.zeros_like(x0)))
-
-
-if __name__ == "__main__":
-    main()
+    store = FeatureStore(args.path_feat_db)
+    main(args)
