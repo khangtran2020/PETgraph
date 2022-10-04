@@ -180,7 +180,7 @@ def main(args):
         df_edges = pd.read_csv(args.path_g)
     if args.debug:
         logger.info('Main in debug mode.')
-        df_edges = df_edges.iloc[-1000000:]
+        df_edges = df_edges.iloc[4079964:]
     if 'seed' not in df_edges:
         df_edges['seed'] = 1
     with timeit(logger, 'g-init'):
@@ -198,7 +198,7 @@ def main(args):
         test_range = set(range(24, 31))
     logger.info('Range Train %s\t Valid %s\t Test %s',
                 train_range, valid_range, test_range)
-    print(g.get_seed_nodes(train_range))
+    print(g.get_seed_nodes(train_range)[0])
     x0 = store.get(g.get_seed_nodes(train_range)[0], None)
     assert x0 is not None
     num_feat = x0.shape[0]
