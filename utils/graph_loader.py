@@ -358,7 +358,7 @@ class ParallelHetDataLoader(object):
             if self.cache_result:
                 self.cache = []
             for encoded_seeds in dl:
-                batch_size, encoded_node_ids, adjs = sampler.sample(encoded_seeds)
+                batch_size, encoded_node_ids, adjs = neighbor_sampler.sample(encoded_seeds)
                 encoded_node_ids = encoded_node_ids.cpu().numpy()
                 edge_ids = self.convert_sage_adjs_to_edge_ids(adjs)
                 encoded_seeds = encoded_seeds.numpy()

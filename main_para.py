@@ -37,20 +37,22 @@ def prepare_data(rank, world_size, args, graph, pin_memory=False):
     dl_train = ParallelHetDataLoader(rank=rank, world_size=world_size,
                                      width=args.width, depth=args.depth,
                                      g=graph, ts_range=args.train_range, method=args.sample_method,
-                                     batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=args.seed_epoch,
+                                     batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=False,
                                      num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed)
 
     dl_valid = ParallelHetDataLoader(rank=rank, world_size=world_size,
                                      width=args.width, depth=args.depth,
                                      g=graph, ts_range=args.valid_range, method=args.sample_method,
-                                     batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=args.seed_epoch,
-                                     num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed)
+                                     batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=True,
+                                     num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed,
+                                     cache_result=True)
 
     dl_test = ParallelHetDataLoader(rank=rank, world_size=world_size,
                                     width=args.width, depth=args.depth,
                                     g=graph, ts_range=args.test_range, method=args.sample_method,
-                                    batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=args.seed_epoch,
-                                    num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed)
+                                    batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=True,
+                                    num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed,
+                                    cache_result=True)
     return dl_train, dl_valid, dl_test
 
 
@@ -140,7 +142,9 @@ def train(gpu, args, graph, default_feat):
     torch.manual_seed(0)
     print("Begin load data at rank {}".format(rank))
     dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=args.world_size, args=args, graph=graph)
-    print("Done load data with train len: {}, valid len: {}, test len: {} at rank {}".format(len(dl_train), len(dl_valid),len(dl_test), rank))
+    print(
+        "Done load data with train len: {}, valid len: {}, test len: {} at rank {}".format(len(dl_train), len(dl_valid),
+                                                                                           len(dl_test), rank))
     model = prepare_model(args=args)
     torch.cuda.set_device(rank)
     print('GPU using is: {}'.format(torch.cuda.current_device()))
