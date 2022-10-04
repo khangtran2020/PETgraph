@@ -38,20 +38,20 @@ def prepare_data(rank, world_size, args, graph, pin_memory=False):
                                      width=args.width, depth=args.depth,
                                      g=graph, ts_range=args.train_range, method=args.sample_method,
                                      batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=False,
-                                     num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed)
+                                     num_workers=args.num_workers, shuffle=False, pin_memory=pin_memory, seed=args.seed)
 
     dl_valid = ParallelHetDataLoader(rank=rank, world_size=world_size,
                                      width=args.width, depth=args.depth,
                                      g=graph, ts_range=args.valid_range, method=args.sample_method,
                                      batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=True,
-                                     num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed,
+                                     num_workers=args.num_workers, shuffle=False, pin_memory=pin_memory, seed=args.seed,
                                      cache_result=True)
 
     dl_test = ParallelHetDataLoader(rank=rank, world_size=world_size,
                                     width=args.width, depth=args.depth,
                                     g=graph, ts_range=args.test_range, method=args.sample_method,
                                     batch_size=args.batch_size, n_batch=args.n_batch, seed_epoch=True,
-                                    num_workers=args.num_workers, shuffle=True, pin_memory=pin_memory, seed=args.seed,
+                                    num_workers=args.num_workers, shuffle=False, pin_memory=pin_memory, seed=args.seed,
                                     cache_result=True)
     return dl_train, dl_valid, dl_test
 
