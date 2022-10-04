@@ -156,7 +156,7 @@ def train(gpu, args, graph, default_feat):
     model = nn.parallel.DistributedDataParallel(model, device_ids=[gpu])
     # Data loading code
 
-    start = datetime.now()
+    # start = datetime.now()
     total_step = len(dl_train)
     print("Train with num step for each epoch: {}".format(total_step))
     for epoch in range(args.epochs):
@@ -171,11 +171,11 @@ def train(gpu, args, graph, default_feat):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if (i + 1) % 100 == 0 and gpu == 0:
+            if (i + 1) % 1 == 0 and gpu == 0:
                 print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format(epoch + 1, args.epochs, i + 1, total_step,
                                                                          loss.item()))
     if gpu == 0:
-        print("Training complete in: " + str(datetime.now() - start))
+        print("Training complete")
 
 
 def main(args):
