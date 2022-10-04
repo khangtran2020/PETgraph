@@ -140,7 +140,7 @@ def train(gpu, args, graph, default_feat):
     torch.manual_seed(0)
     print("Begin load data")
     dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=args.world_size, args=args, graph=graph)
-    print("Done load data")
+    print("Done load data with train len: {}, valid len: {}, test len: {}".format(len(dl_train), len(dl_valid),len(dl_test)))
     model = prepare_model(args=args)
     torch.cuda.set_device(gpu)
     model.cuda(gpu)
