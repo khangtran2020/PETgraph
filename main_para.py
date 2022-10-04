@@ -198,7 +198,7 @@ def main(args):
         test_range = set(range(24, 31))
     logger.info('Range Train %s\t Valid %s\t Test %s',
                 train_range, valid_range, test_range)
-    # print(g.get_seed_nodes(train_range)[0])
+    print(g.get_seed_nodes(train_range))
     x0 = store.get(g.get_seed_nodes(train_range)[0], None)
     assert x0 is not None
     num_feat = x0.shape[0]
