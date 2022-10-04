@@ -142,7 +142,8 @@ def train(gpu, args, graph, default_feat):
     dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=args.world_size, args=args, graph=graph)
     print("Done load data with train len: {}, valid len: {}, test len: {}".format(len(dl_train), len(dl_valid),len(dl_test)))
     model = prepare_model(args=args)
-    model.cuda()
+    print('GPU using is: {}'.format(torch.cuda.current_device()))
+    model.cuda(gpu)
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda(gpu)
     optimizer = prepare_optimizer(args=args, model=model)
