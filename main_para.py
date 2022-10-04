@@ -132,7 +132,7 @@ def prepare_optimizer(args, model):
     return optimizer
 
 
-def train(gpu, args, graph, store, default_feat):
+def train(gpu, args, graph, default_feat):
     print("Begin training process")
     rank = args.nr * args.gpus + gpu
     print("Current rank is: {}".format(rank))
@@ -210,7 +210,7 @@ def main(args):
     args.test_range = test_range
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    mp.spawn(train, nprocs=args.gpus, args=(args, g, store, np.zeros_like(x0)))
+    mp.spawn(train, nprocs=args.gpus, args=(args, g, np.zeros_like(x0)))
 
 
 if __name__ == "__main__":
