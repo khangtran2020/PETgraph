@@ -159,7 +159,7 @@ def train(gpu, args, graph, default_feat):
     # start = datetime.now()
     total_step = len(dl_train)
     print("Train with num step for each epoch: {}".format(total_step))
-    for epoch in range(args.epochs):
+    for epoch in range(args.n_step):
         for i, data in enumerate(dl_train):
             x, y = prepare_batch(batch=data, ts_range=args.train_range, fstore=store, default_feature=default_feat,
                                  g=graph, non_blocking=True)
