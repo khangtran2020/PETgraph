@@ -12,7 +12,6 @@ from torch_sparse import SparseTensor
 from torch_geometric.utils import degree
 from torch_geometric.data.sampler import Adj
 
-
 class DegreeWeightedNeighborSampler(torch.utils.data.DataLoader):
 
     def __init__(self,

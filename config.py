@@ -7,7 +7,7 @@ def add_general_group(group):
     group.add_argument("--save_path", type=str, default="results/", help="dir path for output file")
     group.add_argument("--seed", type=int, default=1, help="seed value")
     group.add_argument("--seed_epoch", type=bool, default=False, help="seed value")
-    group.add_argument("--mode", type=str, default='train', help="Mode of running")
+    group.add_argument("--mode", type=str, default='central', help="Mode of running ['central', 'parallel']")
     group.add_argument("--nr", type=int, default=0, help="Ranking within nodes")
 
 

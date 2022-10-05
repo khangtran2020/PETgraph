@@ -26,11 +26,12 @@ from torch.multiprocessing import Process
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.multiprocessing as mp
 
-from utils.fstore import FeatureStore
-from utils.utils import create_naive_het_graph_from_edges as _create_naive_het_graph_from_edges
-from utils.graph_loader import NaiveHetGraph, ParallelHetDataLoader, NaiveHetDataLoader
-from utils.model import GNN, HetNet as Net, HetNetLogi as NetLogi
-from utils.utils import timeit
+from Utils.fstore import FeatureStore
+from Utils.utils import create_naive_het_graph_from_edges as _create_naive_het_graph_from_edges
+from Graph.graph import NaiveHetGraph
+from Graph.loader import ParallelHetDataLoader, NaiveHetDataLoader
+from Model.model import GNN, HetNet as Net, HetNetLogi as NetLogi
+from Utils.utils import timeit
 
 
 def prepare_data(rank, world_size, args, graph, pin_memory=False):

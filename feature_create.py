@@ -18,7 +18,7 @@ import glob
 import fire
 
 from config import parse_args
-from utils.fstore import FeatureStore
+from Utils.fstore import FeatureStore
 
 
 def main(args, path_db='./data/feat_store.db'):

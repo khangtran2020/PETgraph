@@ -41,11 +41,12 @@ from ignite.handlers import EarlyStopping, ModelCheckpoint, Timer
 from ignite.contrib.metrics import AveragePrecision, ROC_AUC
 from ignite.contrib.handlers.param_scheduler import CosineAnnealingScheduler
 
-from utils.fstore import FeatureStore
-from utils.utils import create_naive_het_graph_from_edges as _create_naive_het_graph_from_edges
-from utils.graph_loader import NaiveHetDataLoader, NaiveHetGraph
-from utils.model import GNN, HetNet as Net, HetNetLogi as NetLogi
-from utils.utils import timeit
+from Utils.fstore import FeatureStore
+from Utils.utils import create_naive_het_graph_from_edges as _create_naive_het_graph_from_edges
+from Graph.loader import NaiveHetDataLoader
+from Graph.graph import NaiveHetGraph, ModifiedHetGraph
+from Model.model import GNN, HetNet as Net, HetNetLogi as NetLogi
+from Utils.utils import timeit
 
 mem = joblib.Memory('./data/cache')
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -101,6 +102,47 @@ def prepare_batch(batch, ts_range, fstore, default_feature,
 
     return ((mask, x, edge_list, node_type, edge_type), y)
 
+def read_data(args, logger):
+    uid_cols = ['MessageId', 'Timestamp', 'UETR', 'Sender', 'Receiver', 'OrderingAccount', 'BeneficiaryAccount',
+                'Label', 'OrderingOriginAdd', 'BeneficiaryOriginAdd']
+    acc_df = pd.read_csv(args.acc_path).drop('OrderingAccount', axis=1)
+    bank_df = pd.read_csv(args.bank_path).drop('Sender', axis=1)
+    train_df = pd.read_csv(args.train_feat_path)
+    test_df = pd.read_csv(args.test_feat_path)
+    feature_cols = list(train_df.columns)
+    for i in uid_cols:
+        feature_cols.remove(i)
+    train_df = train_df[['MessageId'] + feature_cols]
+    test_df = test_df[['MessageId'] + feature_cols]
+
+    acc_dict = dict(zip(acc_df['id'], acc_df.index))
+    bank_dict = dict(zip(bank_df['id'], bank_df.index))
+    train_dict = dict(zip(train_df['MessageId'], train_df.index))
+    test_dict = dict(zip(train_df['MessageId'], test_df.index))
+    type_dict = {
+        'account': acc_dict,
+        'bank': bank_dict,
+        'train': train_dict,
+        'test': test_dict
+    }
+    feat_dict = {
+        'account': acc_df.drop('id', axis=1).to_numpy(),
+        'bank': bank_df.drop('id', axis=1).to_numpy(),
+        'train': train_df.drop('MessageId', axis=1).to_numpy(),
+        'test': test_df.drop('MessageId', axis=1).to_numpy()
+    }
+    return feat_dict, type_dict
+
+def prepare_optimizer(args, model):
+    if args.optimizer == 'adamw':
+        optimizer = torch.optim.AdamW(model.parameters())
+    elif args.optimizer == 'adam':
+        optimizer = torch.optim.Adam(model.parameters())
+    elif args.optimizer == 'sgd':
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+    elif args.optimizer == 'adagrad':
+        optimizer = torch.optim.Adagrad(model.parameters())
+    return optimizer
 
 def main(args):
     """
