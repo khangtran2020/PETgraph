@@ -65,3 +65,54 @@ def main(args):
     with timeit(logger, 'g-init'):
         g = create_modified_het_graph_from_edges(df_edges)
 
+    seed_set = set(df_edges.query('seed>0')['MessageId'])
+    logger.info('#seed %d', len(seed_set))
+    if args.debug:
+        train_range = set(range(15, 22))
+        valid_range = set(range(22, 24))
+        test_range = set(range(24, 31))
+    else:
+        train_range = set(range(1, 22))
+        valid_range = set(range(22, 24))
+        test_range = set(range(24, 31))
+    logger.info('Range Train %s\t Valid %s\t Test %s',
+                train_range, valid_range, test_range)
+    print(g.get_seed_nodes(train_range)[0])
+    x0 = g.get_feat(g.get_seed_nodes(train_range)[0])
+    assert x0 is not None
+    num_feat = x0.shape[0]
+    print(num_feat, x0)
+    exit()
+
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
+    dl_train = NaiveHetDataLoader(
+        width=args.width, depth=args.depth,
+        g=g, ts_range=train_range, method=args.sample_method,
+        batch_size=args.batch_size, n_batch=args.n_batch,
+        seed_epoch=args.seed_epoch, num_workers=args.num_workers, shuffle=True)
+
+    dl_valid = NaiveHetDataLoader(
+        width=args.width, depth=args.depth,
+        g=g, ts_range=valid_range, method=args.sample_method,
+        batch_size=args.batch_size, n_batch=args.n_batch,
+        seed_epoch=True, num_workers=args.num_workers, shuffle=False,
+        cache_result=True)
+
+    dl_test = NaiveHetDataLoader(
+        width=args.width, depth=args.depth,
+        g=g, ts_range=test_range, method=args.sample_method,
+        batch_size=args.batch_size, n_batch=args.n_batch,
+        seed_epoch=True, num_workers=args.num_workers, shuffle=False,
+        cache_result=True)
+
+    logger.info('Len dl train %d, valid %d, test %d.',
+                len(dl_train), len(dl_valid), len(dl_test))
+    # for _ in tqdm.tqdm(dl_test, desc='gen-test-dl', ncols=80):
+    #     pass
+
+    num_node_type = len(g.node_type_encode)
+    num_edge_type = len(g.edge_type_encode)
+    logger.info('#node_type %d, #edge_type %d', num_node_type, num_edge_type)
+
