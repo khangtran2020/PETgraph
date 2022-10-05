@@ -6,7 +6,7 @@ import time
 import logging
 import numpy as np
 from contextlib import contextmanager
-from Utils.graph_loader import GraphData, NaiveHetGraph
+from Graph.graph import GraphData, NaiveHetGraph
 from collections import defaultdict
 
 @contextmanager
