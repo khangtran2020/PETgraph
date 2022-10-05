@@ -200,7 +200,6 @@ class NaiveHetDataLoader(object):
             )
         raise NotImplementedError('unknown method %s' % self.method)
 
-
 class ParallelHetDataLoader(object):
     logger = logging.getLogger('native-het-dl')
 
@@ -297,15 +296,16 @@ class ParallelHetDataLoader(object):
                 encoded_node_ids = encoded_node_ids.cpu().numpy()
                 edge_ids = self.convert_sage_adjs_to_edge_ids(adjs)
                 encoded_seeds = encoded_seeds.numpy()
+                batch = (encoded_seeds, encoded_node_ids, edge_ids)
+                x, y = self.prepare_batch(batch = batch)
                 if self.cache_result:
-                    self.cache.append([encoded_seeds, encoded_node_ids, edge_ids])
-
-                yield encoded_seeds, encoded_node_ids, edge_ids
+                    self.cache.append([x, y])
+                yield x, y
 
     def __len__(self):
         return self.n_batch
 
-    def prepare_batch(self, batch, non_blocking=False):
+    def prepare_batch(self, batch):
         g = self.g
         encoded_seeds, encoded_ids, edge_ids = batch
         encoded_seeds = set(encoded_seeds)
@@ -319,33 +319,20 @@ class ParallelHetDataLoader(object):
         f = lambda x: encode_to_new[x]
         f = np.vectorize(f)
         edge_list = [f(e) for e in edge_list]
-        edge_list = [
-            convert_tensor(torch.LongTensor(e), device=device, non_blocking=non_blocking)
-            for e in edge_list]
-
+        edge_list = [torch.LongTensor(e) for e in edge_list]
         y = np.asarray([
             -1 if e not in encoded_seeds else g.seed_label_encoded[e]
             for e in encoded_ids
         ])
-        # assert (y >= 0).sum() == len(encoded_seeds)
-
         y = torch.LongTensor(y)
-        y = convert_tensor(y, device=device, non_blocking=non_blocking)
         mask = torch.BoolTensor(mask)
-        mask = convert_tensor(mask, device=device, non_blocking=non_blocking)
-
         y = y[mask]
 
         node_type_encode = g.node_type_encode
         node_type = [node_type_encode[g.node_type[e]] for e in decoded_ids]
         node_type = torch.LongTensor(np.asarray(node_type))
-        node_type = convert_tensor(
-            node_type, device=device, non_blocking=non_blocking)
-
         edge_type = [[g.edge_list_type_encoded[eid] for eid in list_] for list_ in edge_ids]
         edge_type = [torch.LongTensor(np.asarray(e)) for e in edge_type]
-        edge_type = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_type]
-
         return ((mask, x, edge_list, node_type, edge_type), y)
 
     def convert_sage_adjs_to_edge_ids(self, adjs):
@@ -419,7 +406,6 @@ class ParallelHetDataLoader(object):
                 shuffle=self.shuffle,
             )
         raise NotImplementedError('unknown method %s' % self.method)
-
 
 class DataLoader(object):
     logger = logging.getLogger('data-loader')
