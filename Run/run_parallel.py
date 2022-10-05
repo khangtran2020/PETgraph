@@ -63,7 +63,7 @@ def main(args):
     if 'seed' not in df_edges:
         df_edges['seed'] = 1
     with timeit(logger, 'g-init'):
-        g = create_modified_het_graph_from_edges(df_edges)
+        g = create_modified_het_graph_from_edges(df_edges,feat_dict)
 
     seed_set = set(df_edges.query('seed>0')['MessageId'])
     logger.info('#seed %d', len(seed_set))
