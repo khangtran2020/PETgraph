@@ -36,7 +36,7 @@ def feature_mock(layer_data, graph, feature_dim=16):
     return feature, times, indxs, texts
 
 
-def create_naive_het_graph_from_edges(df, store):
+def create_naive_het_graph_from_edges(df):
     logger = logging.getLogger('factory-naive-het-graph')
     logger.setLevel(logging.INFO)
 
@@ -110,7 +110,7 @@ def create_naive_het_graph_from_edges(df, store):
     seed_label = dict((k, v) for k, v in view.itertuples(index=False))
 
     return NaiveHetGraph(node_type, edge_list,
-                         seed_label=seed_label, node_ts=node_ts, feat_store=store)
+                         seed_label=seed_label, node_ts=node_ts)
 
 
 def create_graph_data_from_edges(df):
