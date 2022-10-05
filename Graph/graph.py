@@ -85,7 +85,7 @@ class NaiveHetGraph(object):
 class ModifiedHetGraph(object):
     logger = logging.getLogger('native-het-g')
 
-    def __init__(self, node_type: Dict[int, str], feat_dict: Dict, edge_list: Tuple[int, int, str],
+    def __init__(self, node_type: Dict[int, str], feat_dict, edge_list: Tuple[int, int, str],
                  seed_label: Dict[int, int], node_ts: Dict[int, int]):
         self.logger.setLevel(logging.INFO)
         self.node_type = node_type

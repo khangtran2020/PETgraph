@@ -6,10 +6,11 @@ import time
 import logging
 import numpy as np
 from contextlib import contextmanager
-from Graph.graph import GraphData, NaiveHetGraph
+from Graph.graph import GraphData, NaiveHetGraph, ModifiedHetGraph
 from collections import defaultdict
 from ignite.utils import convert_tensor
 import torch
+from tqdm import tqdm
 import pandas as pd
 
 @contextmanager
@@ -251,7 +252,7 @@ def prepare_batch(batch, ts_range, fstore, default_feature,
 
     return ((mask, x, edge_list, node_type, edge_type), y)
 
-def read_data(args, logger):
+def read_data(args):
     uid_cols = ['MessageId', 'Timestamp', 'UETR', 'Sender', 'Receiver', 'OrderingAccount', 'BeneficiaryAccount',
                 'Label', 'OrderingOriginAdd', 'BeneficiaryOriginAdd']
     acc_df = pd.read_csv(args.acc_path).drop('OrderingAccount', axis=1)
@@ -263,21 +264,107 @@ def read_data(args, logger):
         feature_cols.remove(i)
     train_df = train_df[['MessageId'] + feature_cols]
     test_df = test_df[['MessageId'] + feature_cols]
+    acc_df = acc_df[['id'] + feature_cols]
+    bank_df = bank_df[['id'] + feature_cols]
+    feat_dict = {}
+    x = train_df.values
+    for i in tqdm(range(x.shape[0])):
+        key = int(x[i, 0])
+        value = x[i, 1:]
+        feat_dict[key] = value
+    x = test_df.values
+    for i in tqdm(range(x.shape[0])):
+        key = int(x[i, 0])
+        value = x[i, 1:]
+        feat_dict[key] = value
+    x = acc_df.values
+    for i in tqdm(range(x.shape[0])):
+        key = int(x[i, 0])
+        value = x[i, 1:]
+        feat_dict[key] = value
+    x = bank_df.values
+    for i in tqdm(range(x.shape[0])):
+        key = int(x[i, 0])
+        value = x[i, 1:]
+        feat_dict[key] = value
+    return feat_dict
 
-    acc_dict = dict(zip(acc_df['id'], acc_df.index))
-    bank_dict = dict(zip(bank_df['id'], bank_df.index))
-    train_dict = dict(zip(train_df['MessageId'], train_df.index))
-    test_dict = dict(zip(train_df['MessageId'], test_df.index))
-    type_dict = {
-        'account': acc_dict,
-        'bank': bank_dict,
-        'train': train_dict,
-        'test': test_dict
-    }
-    feat_dict = {
-        'account': acc_df.drop('id', axis=1).to_numpy(),
-        'bank': bank_df.drop('id', axis=1).to_numpy(),
-        'train': train_df.drop('MessageId', axis=1).to_numpy(),
-        'test': test_df.drop('MessageId', axis=1).to_numpy()
-    }
-    return feat_dict, type_dict
+def create_modified_het_graph_from_edges(df, feat_dict):
+    logger = logging.getLogger('factory-naive-het-graph')
+    logger.setLevel(logging.INFO)
+
+    with timeit(logger, 'node-type-init'):
+        view = df[['MessageId', 'Days']].drop_duplicates()
+        node_ts = dict((k, v) for k, v in view.itertuples(index=False))
+        df['src_type'] = 0
+        view = df[['MessageId', 'src_type']].drop_duplicates()
+        node_type = dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        )
+        df['sender_bank_type'] = 1
+        view = df[['Sender', 'sender_bank_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        view = df[['Receiver', 'sender_bank_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        df['account_type'] = 2
+        view = df[['OrderingAccount', 'account_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        view = df[['BeneficiaryAccount', 'account_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        df['address_type'] = 3
+        view = df[['OrderingOriginAdd', 'address_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+        view = df[['BeneficiaryOriginAdd', 'address_type']].drop_duplicates()
+        node_type.update(dict(
+            (node, tp)
+            for node, tp in view.itertuples(index=False)
+        ))
+
+    # if 'sender_type' not in df:
+    df['sender_type'] = 'sender'
+    df['receiver_type'] = 'receiver'
+    df['ordering_type'] = 'ordering'
+    df['beneficiary_type'] = 'beneficiary'
+    df['ordering_add_type'] = 'order_add'
+    df['ben_add_type'] = 'ben_add'
+
+    with timeit(logger, 'edge-list-init'):
+        edge_list = list(df[['MessageId', 'Sender', 'sender_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(df[['MessageId', 'Receiver', 'receiver_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(
+            df[['MessageId', 'OrderingAccount', 'ordering_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(
+            df[['MessageId', 'BeneficiaryAccount', 'beneficiary_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(
+            df[['MessageId', 'OrderingOriginAdd', 'ordering_add_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        edge_list += list(
+            df[['MessageId', 'BeneficiaryOriginAdd', 'ben_add_type']].drop_duplicates().itertuples(index=False))
+        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+
+    select = df['seed'] > 0
+    view = df[select][['MessageId', 'Label']].drop_duplicates()
+    seed_label = dict((k, v) for k, v in view.itertuples(index=False))
+
+    return ModifiedHetGraph(node_type, edge_list, feat_dict=feat_dict, seed_label=seed_label, node_ts=node_ts)
+
