@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from Utils.layers import GeneralConv
+from Model.layer import GeneralConv
 
 
 class GNN(nn.Module):
