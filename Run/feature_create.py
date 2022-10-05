@@ -23,14 +23,14 @@ from config import parse_args
 from Utils.fstore import FeatureStore
 
 
-def main(args, path_db='./data/feat_store.db'):
-
+def main(args, path_db='../data/feat_store.db'):
+    data_path = '../'
     store = FeatureStore(path_db)
     node_type = ['bank', 'account', 'address']
     uid_cols = ['MessageId', 'Timestamp', 'UETR', 'Sender', 'Receiver', 'OrderingAccount', 'BeneficiaryAccount', 'Label', 'OrderingOriginAdd', 'BeneficiaryOriginAdd']
 
     # Train
-    df = pd.read_csv(args.train_feat_path)
+    df = pd.read_csv(data_path+args.train_feat_path)
     feature_cols = list(df.columns)
     for i in uid_cols:
         feature_cols.remove(i)
@@ -45,7 +45,7 @@ def main(args, path_db='./data/feat_store.db'):
     gc.collect()
     print("Done for train dataset")
     # Test
-    df = pd.read_csv(args.test_feat_path)
+    df = pd.read_csv(data_path+args.test_feat_path)
     feature_cols = list(df.columns)
     for i in uid_cols:
         feature_cols.remove(i)
@@ -61,7 +61,7 @@ def main(args, path_db='./data/feat_store.db'):
     print("Done for test dataset")
 
     # Bank
-    df = pd.read_csv(args.bank_path)
+    df = pd.read_csv(data_path+args.bank_path)
     feature_cols = list(df.columns)
     feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols].copy()
@@ -78,7 +78,7 @@ def main(args, path_db='./data/feat_store.db'):
     print("Done for bank dataset")
 
     # Acc
-    df = pd.read_csv(args.acc_path)
+    df = pd.read_csv(data_path+args.acc_path)
     feature_cols = list(df.columns)
     feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols].copy()
@@ -94,7 +94,7 @@ def main(args, path_db='./data/feat_store.db'):
     print("Done for Acc Dataset")
 
     # Add
-    df = pd.read_csv(args.add_path)
+    df = pd.read_csv(data_path+args.add_path)
     feature_cols = list(df.columns)
     feature_cols.remove('id')
     temp_df = df[['id'] + feature_cols].copy()
