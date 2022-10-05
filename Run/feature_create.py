@@ -10,13 +10,15 @@
 # limitations under the License.
 import gc
 import os
+import sys
+path = "/".join([x for x in os.path.realpath(__file__).split('/')[:-2]])
+sys.path.insert(0, path)
 import pandas as pd
 import numpy as np
 import networkx as nx
 from tqdm import tqdm
 import glob
 import fire
-
 from config import parse_args
 from Utils.fstore import FeatureStore
 

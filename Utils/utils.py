@@ -8,6 +8,9 @@ import numpy as np
 from contextlib import contextmanager
 from Graph.graph import GraphData, NaiveHetGraph
 from collections import defaultdict
+from ignite.utils import convert_tensor
+import torch
+import pandas as pd
 
 @contextmanager
 def timeit(logger, task):
@@ -200,3 +203,81 @@ def create_naive_het_homo_graph_from_edges(df):
     return NaiveHetGraph(node_type, edge_list,
                          seed_label=seed_label, node_ts=node_ts)
 
+
+def prepare_batch(batch, ts_range, fstore, default_feature,
+                  g: NaiveHetGraph,
+                  device, non_blocking=False):
+    encoded_seeds, encoded_ids, edge_ids = batch
+    encoded_seeds = set(encoded_seeds)
+    encode_to_new = dict((e, i) for i, e in enumerate(encoded_ids))
+    mask = np.asarray([e in encoded_seeds for e in encoded_ids])
+    decoded_ids = [g.node_decode[e] for e in encoded_ids]
+
+    x = np.asarray([
+        fstore.get(e, default_feature) for e in decoded_ids
+    ])
+    x = convert_tensor(torch.FloatTensor(x), device=device, non_blocking=non_blocking)
+
+    edge_list = [g.edge_list_encoded[:, idx] for idx in edge_ids]
+    f = lambda x: encode_to_new[x]
+    f = np.vectorize(f)
+    edge_list = [f(e) for e in edge_list]
+    edge_list = [
+        convert_tensor(torch.LongTensor(e), device=device, non_blocking=non_blocking)
+        for e in edge_list]
+
+    y = np.asarray([
+        -1 if e not in encoded_seeds else g.seed_label_encoded[e]
+        for e in encoded_ids
+    ])
+    # assert (y >= 0).sum() == len(encoded_seeds)
+
+    y = torch.LongTensor(y)
+    y = convert_tensor(y, device=device, non_blocking=non_blocking)
+    mask = torch.BoolTensor(mask)
+    mask = convert_tensor(mask, device=device, non_blocking=non_blocking)
+
+    y = y[mask]
+
+    node_type_encode = g.node_type_encode
+    node_type = [node_type_encode[g.node_type[e]] for e in decoded_ids]
+    node_type = torch.LongTensor(np.asarray(node_type))
+    node_type = convert_tensor(
+        node_type, device=device, non_blocking=non_blocking)
+
+    edge_type = [[g.edge_list_type_encoded[eid] for eid in list_] for list_ in edge_ids]
+    edge_type = [torch.LongTensor(np.asarray(e)) for e in edge_type]
+    edge_type = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_type]
+
+    return ((mask, x, edge_list, node_type, edge_type), y)
+
+def read_data(args, logger):
+    uid_cols = ['MessageId', 'Timestamp', 'UETR', 'Sender', 'Receiver', 'OrderingAccount', 'BeneficiaryAccount',
+                'Label', 'OrderingOriginAdd', 'BeneficiaryOriginAdd']
+    acc_df = pd.read_csv(args.acc_path).drop('OrderingAccount', axis=1)
+    bank_df = pd.read_csv(args.bank_path).drop('Sender', axis=1)
+    train_df = pd.read_csv(args.train_feat_path)
+    test_df = pd.read_csv(args.test_feat_path)
+    feature_cols = list(train_df.columns)
+    for i in uid_cols:
+        feature_cols.remove(i)
+    train_df = train_df[['MessageId'] + feature_cols]
+    test_df = test_df[['MessageId'] + feature_cols]
+
+    acc_dict = dict(zip(acc_df['id'], acc_df.index))
+    bank_dict = dict(zip(bank_df['id'], bank_df.index))
+    train_dict = dict(zip(train_df['MessageId'], train_df.index))
+    test_dict = dict(zip(train_df['MessageId'], test_df.index))
+    type_dict = {
+        'account': acc_dict,
+        'bank': bank_dict,
+        'train': train_dict,
+        'test': test_dict
+    }
+    feat_dict = {
+        'account': acc_df.drop('id', axis=1).to_numpy(),
+        'bank': bank_df.drop('id', axis=1).to_numpy(),
+        'train': train_df.drop('MessageId', axis=1).to_numpy(),
+        'test': test_df.drop('MessageId', axis=1).to_numpy()
+    }
+    return feat_dict, type_dict
