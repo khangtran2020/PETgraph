@@ -16,8 +16,7 @@ RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_6
         echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
         find /opt/conda/ -follow -type f -name '*.a' -delete && \
         find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
-        /opt/conda/bin/conda clean -afy \
-
+        /opt/conda/bin/conda clean -afy
 
 # set path to conda
 ENV PATH /opt/conda/bin:$PATH

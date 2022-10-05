@@ -119,6 +119,9 @@ class ModifiedHetGraph(object):
         types = sorted(list(set(node_type.values())))
         return dict((v, i) for i, v in enumerate(types))
 
+    def get_feat(self, idx):
+        return self.feat_dict[idx]
+
     def get_sage_sampler(self, seeds, sizes=[-1], shuffle=False, batch_size=0):
         from torch_geometric.data.sampler import NeighborSampler
         g = self
