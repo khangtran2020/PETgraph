@@ -43,13 +43,13 @@ def create_naive_het_graph_from_edges(df, store):
     with timeit(logger, 'node-type-init'):
         view = df[['MessageId', 'Days']].drop_duplicates()
         node_ts = dict((k, v) for k, v in view.itertuples(index=False))
-        df['src_type'] = 1
+        df['src_type'] = 0
         view = df[['MessageId', 'src_type']].drop_duplicates()
         node_type = dict(
             (node, tp)
             for node, tp in view.itertuples(index=False)
         )
-        df['sender_bank_type'] = 0
+        df['sender_bank_type'] = 1
         view = df[['Sender', 'sender_bank_type']].drop_duplicates()
         node_type.update(dict(
             (node, tp)
@@ -60,7 +60,7 @@ def create_naive_het_graph_from_edges(df, store):
             (node, tp)
             for node, tp in view.itertuples(index=False)
         ))
-        df['account_type'] = 1
+        df['account_type'] = 2
         view = df[['OrderingAccount', 'account_type']].drop_duplicates()
         node_type.update(dict(
             (node, tp)
@@ -71,7 +71,7 @@ def create_naive_het_graph_from_edges(df, store):
             (node, tp)
             for node, tp in view.itertuples(index=False)
         ))
-        df['address_type'] = 2
+        df['address_type'] = 3
         view = df[['OrderingOriginAdd', 'address_type']].drop_duplicates()
         node_type.update(dict(
             (node, tp)

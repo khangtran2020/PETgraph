@@ -150,7 +150,7 @@ class NaiveHetDataLoader(object):
 
     def get_sage_neighbor_sampler(self, seeds):
         from torch_geometric.data.sampler import NeighborSampler
-        from Utils.sampler import DegreeWeightedNeighborSampler
+        from Graph.sampler import DegreeWeightedNeighborSampler
         g = self.g
         g.node_type_encode
         edge_index = g.edge_list_encoded
@@ -198,34 +198,29 @@ class NaiveHetDataLoader(object):
             )
         raise NotImplementedError('unknown method %s' % self.method)
 
-
 class ParallelHetDataLoader(object):
     logger = logging.getLogger('native-het-dl')
 
     def __init__(self, rank: int, world_size: int, width: Union[int, List], depth: int,
-                 g: NaiveHetGraph, ts_range: Set, batch_size: int, n_batch: int, seed_epoch: bool,
+                 g: ModifiedHetGraph, ts_range: Set, batch_size, n_batch: int, seed_epoch: bool,
                  shuffle: bool, num_workers: int, method: str, cache_result: bool = False, pin_memory: bool = False,
                  seed: int = 0):
 
         self.g = g
         self.ts_range = ts_range
-
         if seed_epoch:
             batch_size = sum(batch_size)
             n_batch = int(np.ceil(len(self.seeds) / batch_size))
         else:
             assert len(batch_size) == len(self.label_seed)
-
         self.seed_epoch = seed_epoch
         self.batch_size = batch_size
         self.n_batch = n_batch
         self.shuffle = shuffle
         self.num_workers = num_workers
-
         self.depth = depth
         self.width = width if isinstance(list, tuple) else [width] * depth
         assert len(self.width) == depth
-
         self.method = method
         self.cache_result = cache_result
         self.cache = None
@@ -233,6 +228,7 @@ class ParallelHetDataLoader(object):
         self.world_size = world_size
         self.pin_memory = pin_memory
         self.seed = seed
+        self.feat_dict = g.feat_dict
 
     @property
     @lru_cache()
@@ -330,7 +326,7 @@ class ParallelHetDataLoader(object):
 
     def get_sage_neighbor_sampler(self, seeds):
         from torch_geometric.data.sampler import NeighborSampler
-        from Utils.sampler import DegreeWeightedNeighborSampler
+        from Graph.sampler import DegreeWeightedNeighborSampler
         g = self.g
         g.node_type_encode
         edge_index = g.edge_list_encoded
