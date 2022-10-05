@@ -7,7 +7,7 @@ SHELL ["/bin/bash", "-c"]
 
 # install anaconda
 RUN apt-get update
-RUN apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion && \
+RUN apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion vim && \
         apt-get clean
 RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh -O ~/anaconda.sh && \
         /bin/bash ~/anaconda.sh -b -p /opt/conda && \
@@ -17,7 +17,7 @@ RUN wget --quiet https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_6
         find /opt/conda/ -follow -type f -name '*.a' -delete && \
         find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
         /opt/conda/bin/conda clean -afy \
-RUN apt-get install nano
+
 
 # set path to conda
 ENV PATH /opt/conda/bin:$PATH

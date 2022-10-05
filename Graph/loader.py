@@ -19,6 +19,7 @@ import torch
 from torch_geometric.data import Data as PygData
 import tqdm
 
+
 @contextmanager
 def timeit(logger, task):
     logger.info('Started task %s ...', task)
@@ -26,6 +27,7 @@ def timeit(logger, task):
     yield
     t1 = time.time()
     logger.info('Completed task %s - %.3f sec.', task, t1 - t0)
+
 
 class NaiveHetDataLoader(object):
     logger = logging.getLogger('native-het-dl')
@@ -198,6 +200,7 @@ class NaiveHetDataLoader(object):
             )
         raise NotImplementedError('unknown method %s' % self.method)
 
+
 class ParallelHetDataLoader(object):
     logger = logging.getLogger('native-het-dl')
 
@@ -280,10 +283,9 @@ class ParallelHetDataLoader(object):
             g = self.g
             seeds = self.sample_seeds()
             seeds_encoded = [g.node_encode[e] for e in seeds]
-            neighbor_sampler = self.get_sage_neighbor_sampler(
-                seeds=seeds)
+            neighbor_sampler = self.get_sage_neighbor_sampler(seeds=seeds)
             sampler = DistributedSampler(dataset=seeds_encoded, num_replicas=self.world_size, rank=self.rank,
-                                         shuffle=self.shuffle, seed=self.seed, drop_last=True)
+                                         shuffle=self.shuffle)
             bz = sum(self.batch_size) if not self.seed_epoch else self.batch_size
             dl = DataLoader(seeds_encoded, batch_size=bz, shuffle=self.shuffle, pin_memory=self.pin_memory,
                             sampler=sampler, num_workers=self.num_workers)
@@ -297,10 +299,58 @@ class ParallelHetDataLoader(object):
                 encoded_seeds = encoded_seeds.numpy()
                 if self.cache_result:
                     self.cache.append([encoded_seeds, encoded_node_ids, edge_ids])
+
                 yield encoded_seeds, encoded_node_ids, edge_ids
 
     def __len__(self):
         return self.n_batch
+
+    def prepare_batch(batch, ts_range, fstore, default_feature,
+                      g: NaiveHetGraph,
+                      device, non_blocking=False):
+        encoded_seeds, encoded_ids, edge_ids = batch
+        encoded_seeds = set(encoded_seeds)
+        encode_to_new = dict((e, i) for i, e in enumerate(encoded_ids))
+        mask = np.asarray([e in encoded_seeds for e in encoded_ids])
+        decoded_ids = [g.node_decode[e] for e in encoded_ids]
+
+        x = np.asarray([
+            fstore.get(e, default_feature) for e in decoded_ids
+        ])
+        x = convert_tensor(torch.FloatTensor(x), device=device, non_blocking=non_blocking)
+
+        edge_list = [g.edge_list_encoded[:, idx] for idx in edge_ids]
+        f = lambda x: encode_to_new[x]
+        f = np.vectorize(f)
+        edge_list = [f(e) for e in edge_list]
+        edge_list = [
+            convert_tensor(torch.LongTensor(e), device=device, non_blocking=non_blocking)
+            for e in edge_list]
+
+        y = np.asarray([
+            -1 if e not in encoded_seeds else g.seed_label_encoded[e]
+            for e in encoded_ids
+        ])
+        # assert (y >= 0).sum() == len(encoded_seeds)
+
+        y = torch.LongTensor(y)
+        y = convert_tensor(y, device=device, non_blocking=non_blocking)
+        mask = torch.BoolTensor(mask)
+        mask = convert_tensor(mask, device=device, non_blocking=non_blocking)
+
+        y = y[mask]
+
+        node_type_encode = g.node_type_encode
+        node_type = [node_type_encode[g.node_type[e]] for e in decoded_ids]
+        node_type = torch.LongTensor(np.asarray(node_type))
+        node_type = convert_tensor(
+            node_type, device=device, non_blocking=non_blocking)
+
+        edge_type = [[g.edge_list_type_encoded[eid] for eid in list_] for list_ in edge_ids]
+        edge_type = [torch.LongTensor(np.asarray(e)) for e in edge_type]
+        edge_type = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_type]
+
+        return ((mask, x, edge_list, node_type, edge_type), y)
 
     def convert_sage_adjs_to_edge_ids(self, adjs):
         from torch_geometric.data.sampler import Adj
@@ -373,6 +423,7 @@ class ParallelHetDataLoader(object):
                 shuffle=self.shuffle,
             )
         raise NotImplementedError('unknown method %s' % self.method)
+
 
 class DataLoader(object):
     logger = logging.getLogger('data-loader')
