@@ -262,34 +262,40 @@ def read_data(args):
     feature_cols = list(train_df.columns)
     for i in uid_cols:
         feature_cols.remove(i)
+    num_feat = len(feature_cols)
     train_df = train_df[['MessageId'] + feature_cols]
     test_df = test_df[['MessageId'] + feature_cols]
     acc_df = acc_df[['id'] + feature_cols]
     bank_df = bank_df[['id'] + feature_cols]
-    feat_dict = {}
+    feat_dict = []
+    index_dict = []
     x = train_df.values
     for i in tqdm(range(x.shape[0])):
         key = int(x[i, 0])
         value = x[i, 1:]
-        feat_dict[key] = value
+        index_dict.append(key)
+        feat_dict.append(value.tolist())
     x = test_df.values
     for i in tqdm(range(x.shape[0])):
         key = int(x[i, 0])
         value = x[i, 1:]
-        feat_dict[key] = value
-    x = acc_df.values
-    for i in tqdm(range(x.shape[0])):
-        key = int(x[i, 0])
-        value = x[i, 1:]
-        feat_dict[key] = value
+        index_dict.append(key)
+        feat_dict.append(value.tolist())
     x = bank_df.values
     for i in tqdm(range(x.shape[0])):
         key = int(x[i, 0])
         value = x[i, 1:]
-        feat_dict[key] = value
-    return feat_dict
+        index_dict.append(key)
+        feat_dict.append(value.tolist())
+    x = acc_df.values
+    for i in tqdm(range(x.shape[0])):
+        key = int(x[i, 0])
+        value = x[i, 1:]
+        index_dict.append(key)
+        feat_dict.append(value.tolist())
+    return index_dict, np.array(feat_dict)
 
-def create_modified_het_graph_from_edges(df, feat_dict):
+def create_modified_het_graph_from_edges(df, index_dict, feat_dict):
     print('we are here 1')
     logger = logging.getLogger('factory-naive-het-graph')
     logger.setLevel(logging.INFO)
@@ -368,7 +374,7 @@ def create_modified_het_graph_from_edges(df, feat_dict):
     view = df[select][['MessageId', 'Label']].drop_duplicates()
     seed_label = dict((k, v) for k, v in view.itertuples(index=False))
 
-    return ModifiedHetGraph(node_type, edge_list, feat_dict=feat_dict, seed_label=seed_label, node_ts=node_ts)
+    return ModifiedHetGraph(node_type, edge_list, feat_dict, index_dict, seed_label=seed_label, node_ts=node_ts)
 
 def prepare_batch_para(batch, device, non_blocking=False):
     x, y = batch

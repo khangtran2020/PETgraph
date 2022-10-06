@@ -172,7 +172,7 @@ def main(args):
     if not os.path.isdir(args.dir_model):
         os.makedirs(args.dir_model)
     with timeit(logger, 'read-data'):
-        feat_dict = read_data(args)
+        index_dict, feat_dict = read_data(args)
     with timeit(logger, 'edge-load'):
         df_edges = pd.read_csv(args.path_g)
     if args.debug:
@@ -181,7 +181,7 @@ def main(args):
     if 'seed' not in df_edges:
         df_edges['seed'] = 1
     with timeit(logger, 'g-init'):
-        g = create_modified_het_graph_from_edges(df=df_edges, feat_dict=feat_dict)
+        g = create_modified_het_graph_from_edges(df=df_edges, index_dict=index_dict, feat_dict=feat_dict)
     print(g)
     exit()
 

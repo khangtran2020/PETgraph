@@ -85,7 +85,7 @@ class NaiveHetGraph(object):
 class ModifiedHetGraph(object):
     logger = logging.getLogger('native-het-g')
 
-    def __init__(self, node_type: Dict[int, str], feat_dict, edge_list: Tuple[int, int, str],
+    def __init__(self, node_type: Dict[int, str], edge_list: Tuple[int, int, str], feat_dict, index_dict,
                  seed_label: Dict[int, int], node_ts: Dict[int, int]):
         self.logger.setLevel(logging.INFO)
         self.node_type = node_type
@@ -93,6 +93,7 @@ class ModifiedHetGraph(object):
         self.seed_label = seed_label
         self.node_ts = node_ts
         self.feat_dict = feat_dict
+        self.index_dict = index_dict
         with timeit(self.logger, 'node-enc-init'):
             self.node_encode = dict((n, i) for i, n in enumerate(node_type.keys()))
             self.node_decode = dict((i, n) for n, i in self.node_encode.items())
@@ -120,7 +121,8 @@ class ModifiedHetGraph(object):
         return dict((v, i) for i, v in enumerate(types))
 
     def get_feat(self, idx):
-        return self.feat_dict[idx]
+        index = self.index_dict.index(idx)
+        return self.feat_dict[index]
 
     def get_sage_sampler(self, seeds, sizes=[-1], shuffle=False, batch_size=0):
         from torch_geometric.data.sampler import NeighborSampler
