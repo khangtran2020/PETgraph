@@ -365,6 +365,31 @@ def main(args):
     with timeit(logger, 'g-init'):
         g = create_modified_het_graph_from_edges(df=df_edges, index_dict=index_dict, feat_dict=feat_dict)
 
+    seed_set = set(df_edges.query('seed>0')['MessageId'])
+    logger.info('#seed %d', len(seed_set))
+    if args.debug:
+        train_range = set(range(15, 22))
+        valid_range = set(range(22, 24))
+        test_range = set(range(24, 31))
+    else:
+        train_range = set(range(1, 22))
+        valid_range = set(range(22, 24))
+        test_range = set(range(24, 31))
+    logger.info('Range Train %s\t Valid %s\t Test %s',
+                train_range, valid_range, test_range)
+    print(g.get_seed_nodes(train_range)[0])
+    x0 = g.get_feat(idx=0)
+    assert x0 is not None
+    args.num_feat = x0.shape[0]
+    args.num_node_type = len(g.node_type_encode)
+    args.num_edge_type = len(g.edge_type_encode)
+    args.train_range = train_range
+    args.valid_range = valid_range
+    args.test_range = test_range
+
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+
     with dist.Parallel(backend=args.backend, nproc_per_node=args.nproc_per_node) as parallel:
         parallel.run(training, config=args, g = g)
 
