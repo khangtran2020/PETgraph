@@ -9,6 +9,8 @@ def add_general_group(group):
     group.add_argument("--seed_epoch", type=bool, default=False, help="seed value")
     group.add_argument("--mode", type=str, default='central', help="Mode of running ['central', 'parallel']")
     group.add_argument("--nr", type=int, default=0, help="Ranking within nodes")
+    group.add_argument("--backend", type=str, default='nccl', help="backend")
+    group.add_argument("--nproc_per_node", type=int, default=4, help="Ranking within nodes")
 
 
 def add_data_group(group):
@@ -46,6 +48,7 @@ def add_model_group(group):
 
     group.add_argument("--num_warmup_epochs", type=int, default=1)
     group.add_argument("--with_clearml", type=bool, default=False)
+    group.add_argument("--with_amp", type=bool, default=False)
 
 
 def parse_args():

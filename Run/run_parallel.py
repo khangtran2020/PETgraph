@@ -4,27 +4,36 @@ import tempfile
 import subprocess
 from functools import partial
 import glob
+
+import ignite
+from torch.cuda.amp import autocast
+
 from config import parse_args
 import fire
 import tqdm
+import time
 import joblib
 import numpy as np
 import pandas as pd
 import datetime
 from pathlib import Path
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 # torch
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 # ignite
-from ignite.utils import convert_tensor
+from ignite.utils import convert_tensor, manual_seed, setup_logger
 from ignite.engine import Events, create_supervised_trainer, create_supervised_evaluator, Engine
 from ignite.metrics import Accuracy, Loss
 from ignite.handlers import EarlyStopping, ModelCheckpoint, Timer
 from ignite.contrib.metrics import AveragePrecision, ROC_AUC
 from ignite.contrib.handlers.param_scheduler import CosineAnnealingScheduler, PiecewiseLinear
 import ignite.distributed as dist
+from ignite.engine import EventEnum, _prepare_batch
+from ignite.engine.deterministic import DeterministicEngine
+from ignite.contrib.engines import common
 
 # other things
 from Utils.fstore import FeatureStore
@@ -62,6 +71,7 @@ def prepare_data(rank, world_size, args, graph, pin_memory=False):
                                     cache_result=True)
     return dl_train, dl_valid, dl_test
 
+
 def prepare_model(args):
     if args.conv_name != 'logi':
         if args.conv_name == '':
@@ -88,6 +98,7 @@ def prepare_model(args):
     model = dist.auto_model(model)
     return model
 
+
 def prepare_optimizer(args, model):
     optimizer = None
     if args.optimizer == 'adamw':
@@ -101,8 +112,10 @@ def prepare_optimizer(args, model):
     optimizer = dist.auto_optim(optimizer)
     return optimizer
 
+
 def get_criterion():
     return nn.CrossEntropyLoss().to(dist.device())
+
 
 def get_lr_scheduler(args, optimizer):
     milestones_values = [
@@ -115,11 +128,13 @@ def get_lr_scheduler(args, optimizer):
     )
     return lr_scheduler
 
+
 def get_save_handler(args):
     if args.with_clearml:
         from ignite.contrib.handlers.clearml_logger import ClearMLSaver
         return ClearMLSaver(dirname=args.save_path)
     return args.save_path
+
 
 def load_checkpoint(resume_from):
     checkpoint_fp = Path(resume_from)
@@ -129,29 +144,196 @@ def load_checkpoint(resume_from):
     checkpoint = torch.load(checkpoint_fp.as_posix(), map_location="cpu")
     return checkpoint
 
-#
-# def train_step(engine, batch):
-#     x, y = batch[0], batch[1]
-#     if x.device != device:
-#         x = x.to(device, non_blocking=True)
-#         y = y.to(device, non_blocking=True)
-#
-#     model.train()
-#
-#     with autocast(enabled=with_amp):
-#         y_pred = model(x)
-#         loss = criterion(y_pred, y)
-#
-#     optimizer.zero_grad()
-#     scaler.scale(loss).backward()  # If with_amp=False, this is equivalent to loss.backward()
-#     scaler.step(optimizer)  # If with_amp=False, this is equivalent to optimizer.step()
-#     scaler.update()  # If with_amp=False, this step does nothing
-#
-#     return {"batch loss": loss.item()}
+
+class ForwardEvents(EventEnum):
+    FORWARD_STARTED = 'forward_started'
+    FORWARD_COMPLETED = 'forward_completed'
+
+
+def log_basic_info(logger, config):
+    logger.info(f"Train on CIFAR10")
+    logger.info(f"- PyTorch version: {torch.__version__}")
+    logger.info(f"- Ignite version: {ignite.__version__}")
+    if torch.cuda.is_available():
+        # explicitly import cudnn as torch.backends.cudnn can not be pickled with hvd spawning procs
+        from torch.backends import cudnn
+
+        logger.info(
+            f"- GPU Device: {torch.cuda.get_device_name(dist.get_local_rank())}"
+        )
+        logger.info(f"- CUDA version: {torch.version.cuda}")
+        logger.info(f"- CUDNN version: {cudnn.version()}")
+
+    logger.info("\n")
+    logger.info("Configuration:")
+    for key, value in config.items():
+        logger.info(f"\t{key}: {value}")
+    logger.info("\n")
+
+    if dist.get_world_size() > 1:
+        logger.info("\nDistributed setting:")
+        logger.info(f"\tbackend: {dist.backend()}")
+        logger.info(f"\tworld size: {dist.get_world_size()}")
+        logger.info("\n")
+
+
+def udf_supervised_trainer(
+        model: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        loss_fn: Union[Callable, torch.nn.Module],
+        device: Optional[Union[str, torch.device]] = None,
+        non_blocking: bool = False,
+        prepare_batch: Callable = _prepare_batch,
+        output_transform: Callable = lambda x, y, y_pred, loss: loss.item(),
+        deterministic: bool = False,
+) -> Engine:
+    device_type = device.type if isinstance(device, torch.device) else device
+
+    def _update(engine: Engine, batch: Sequence[torch.Tensor]) -> Union[Any, Tuple[torch.Tensor]]:
+        model.train()
+        optimizer.zero_grad()
+        x, y = prepare_batch(batch, device=device, non_blocking=non_blocking)
+
+        engine.fire_event(ForwardEvents.FORWARD_STARTED)
+        y_pred = model(x)
+        engine.fire_event(ForwardEvents.FORWARD_COMPLETED)
+
+        loss = loss_fn(y_pred, y)
+        loss.backward()
+        optimizer.step()
+
+        return output_transform(x, y, y_pred, loss)
+
+    trainer = Engine(_update) if not deterministic else DeterministicEngine(_update)
+    trainer.register_events(*ForwardEvents)
+
+    return trainer
+
+
+def setup_rank_zero(logger, config):
+    device = dist.device()
+
+    now = time.time()
+    output_path = config.save_path
+    folder_name = (
+        f"{config['model']}_backend-{dist.backend()}-{dist.get_world_size()}_{now}"
+    )
+    output_path = Path(output_path) / folder_name
+    if not output_path.exists():
+        output_path.mkdir(parents=True)
+    config.save_path = output_path.as_posix()
+    logger.info(f"Output path: {config.save_path}")
+
+
+def training(local_rank, config, g):
+    rank = dist.get_rank()
+    manual_seed(config.seed + rank)
+    device = dist.device()
+
+    logger = setup_logger(name="PET-Training")
+    log_basic_info(logger, config)
+
+    if rank == 0:
+        setup_rank_zero(logger, config)
+
+    dl_train, dl_valid, dl_test = prepare_data(rank=rank, world_size=dist.get_world_size(), args=config, graph=g,
+                                               pin_memory=True)
+    model = prepare_model(config)
+    optimizer = prepare_optimizer(config, model)
+    criterion = get_criterion()
+    config.num_iters_per_epoch = len(dl_train)
+    pb = partial(prepare_batch_para, device = device)
+    trainer = udf_supervised_trainer(model=model, optimizer=optimizer, loss_fn=criterion, device=dist.device(), prepare_batch=pb)
+    scheduler = CosineAnnealingScheduler(
+            optimizer, 'lr',
+            start_value=0.05, end_value=1e-4,
+            cycle_size=len(dl_train) * config.n_step)
+    trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
+    evaluator = create_supervised_evaluator(model, metrics={
+                                                'accuracy': Accuracy(),
+                                                'loss': Loss(criterion),
+                                                'ap': AveragePrecision(
+                                                    output_transform=lambda out: (out[0][:, 1], out[1])),
+                                                'auc': ROC_AUC(
+                                                    output_transform=lambda out: (out[0][:, 1], out[1])),
+                                            }, device=device, prepare_batch=pb)
+    pbar_train = tqdm.tqdm(desc='train', total=len(dl_train), ncols=100)
+    t_epoch = Timer(average=True)
+    t_epoch.pause()
+
+    t_iter = Timer(average=True)
+    t_iter.pause()
+
+    @trainer.on(ForwardEvents.FORWARD_STARTED)
+    def resume_timer(engine):
+        t_epoch.resume()
+        t_iter.resume()
+
+    @trainer.on(ForwardEvents.FORWARD_COMPLETED)
+    def pause_timer(engine):
+        t_epoch.pause()
+        t_iter.pause()
+        t_iter.step()
+
+    @trainer.on(Events.EPOCH_STARTED)
+    def log_training_loss(engine):
+        pbar_train.refresh()
+        pbar_train.reset()
+
+    @trainer.on(Events.ITERATION_COMPLETED)
+    def log_training_loss(engine):
+        pbar_train.update(1)
+        pbar_train.set_description(
+            'Train [Eopch %03d] Loss %.4f T-iter %.4f' % (
+                engine.state.epoch, engine.state.output, t_iter.value()
+            )
+        )
+
+    @trainer.on(Events.EPOCH_COMPLETED)
+    def log_training_results(engine):
+        t_epoch.step()
+        evaluator.run(dl_valid)
+        metrics = evaluator.state.metrics
+        logger.info(
+            '[Epoch %03d]\tLoss %.4f\tAccuracy %.4f\tAUC %.4f\tAP %.4f \tTime %.2f / %03d',
+            engine.state.epoch,
+            metrics['loss'], metrics['accuracy'],
+            metrics['auc'], metrics['ap'],
+            t_epoch.value(), t_epoch.step_count
+        )
+        t_iter.reset()
+        t_epoch.pause()
+        t_iter.pause()
+
+    def score_function(engine):
+        return engine.state.metrics['auc']
+
+    handler = EarlyStopping(patience=config.patient, score_function=score_function, trainer=trainer)
+    evaluator.add_event_handler(Events.COMPLETED, handler)
+
+    cp = ModelCheckpoint(config.dir_model, f'model-{config.conv_name}-{config.seed}', n_saved=1,
+                         create_dir=True,
+                         score_function=lambda e: evaluator.state.metrics['auc'],
+                         require_empty=False)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {config.conv_name: model})
+
+    if rank == 0:
+        evaluators = {"train": evaluator, "val": evaluator}
+        tb_logger = common.setup_tb_logging(
+            config.save_path, trainer, optimizer, evaluators=evaluators
+        )
+
+    try:
+        trainer.run(dl_train, max_epochs=config.n_step)
+    except Exception as e:
+        logger.exception("")
+        raise e
+
+    if rank == 0:
+        tb_logger.close()
 
 
 def main(args):
-
     mem = joblib.Memory('./data/cache')
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     create_modified_het_graph_from_edges = mem.cache(_create_modified_het_graph_from_edges)
@@ -182,7 +364,8 @@ def main(args):
         df_edges['seed'] = 1
     with timeit(logger, 'g-init'):
         g = create_modified_het_graph_from_edges(df=df_edges, index_dict=index_dict, feat_dict=feat_dict)
-    print(g)
-    exit()
 
+    with dist.Parallel(backend=args.backend, nproc_per_node=args.nproc_per_node) as parallel:
+        parallel.run(training, config=args, g = g)
 
+    #
