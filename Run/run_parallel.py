@@ -389,7 +389,7 @@ def main(args):
     args.valid_range = valid_range
     args.test_range = test_range
     print(args.num_feat, args.num_node_type)
-    exit()
+    # exit()
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
