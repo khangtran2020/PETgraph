@@ -332,17 +332,6 @@ def create_modified_het_graph_from_edges(df, index_dict, feat_dict):
             (node, tp)
             for node, tp in view.itertuples(index=False)
         ))
-        df['address_type'] = 3
-        view = df[['OrderingOriginAdd', 'address_type']].drop_duplicates()
-        node_type.update(dict(
-            (node, tp)
-            for node, tp in view.itertuples(index=False)
-        ))
-        view = df[['BeneficiaryOriginAdd', 'address_type']].drop_duplicates()
-        node_type.update(dict(
-            (node, tp)
-            for node, tp in view.itertuples(index=False)
-        ))
     print('we are here 3')
     # if 'sender_type' not in df:
     df['sender_type'] = 'sender'
@@ -363,12 +352,12 @@ def create_modified_het_graph_from_edges(df, index_dict, feat_dict):
         edge_list += list(
             df[['MessageId', 'BeneficiaryAccount', 'beneficiary_type']].drop_duplicates().itertuples(index=False))
         edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
-        edge_list += list(
-            df[['MessageId', 'OrderingOriginAdd', 'ordering_add_type']].drop_duplicates().itertuples(index=False))
-        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
-        edge_list += list(
-            df[['MessageId', 'BeneficiaryOriginAdd', 'ben_add_type']].drop_duplicates().itertuples(index=False))
-        edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        # edge_list += list(
+        #     df[['MessageId', 'OrderingOriginAdd', 'ordering_add_type']].drop_duplicates().itertuples(index=False))
+        # edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
+        # edge_list += list(
+        #     df[['MessageId', 'BeneficiaryOriginAdd', 'ben_add_type']].drop_duplicates().itertuples(index=False))
+        # edge_list += [(e1, e0, t) for e0, e1, t in edge_list]
 
     select = df['seed'] > 0
     view = df[select][['MessageId', 'Label']].drop_duplicates()
