@@ -355,6 +355,7 @@ def main(args):
         os.makedirs(args.dir_model)
     with timeit(logger, 'read-data'):
         index_dict, feat_dict = read_data(args)
+        print(len(index_dict))
     with timeit(logger, 'edge-load'):
         df_edges = pd.read_csv(args.path_g)
     if args.debug:
@@ -379,6 +380,8 @@ def main(args):
                 train_range, valid_range, test_range)
     print(g.get_seed_nodes(train_range)[0])
     x0 = g.get_feat(idx=0)
+    print(x0)
+    exit()
     assert x0 is not None
     args.num_feat = x0.shape[0]
     args.num_node_type = len(g.node_type_encode)
