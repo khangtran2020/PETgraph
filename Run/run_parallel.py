@@ -381,7 +381,6 @@ def main(args):
     print(g.get_seed_nodes(train_range)[0])
     x0 = g.get_feat(idx=0)
     print(x0)
-    exit()
     assert x0 is not None
     args.num_feat = x0.shape[0]
     args.num_node_type = len(g.node_type_encode)
@@ -389,7 +388,8 @@ def main(args):
     args.train_range = train_range
     args.valid_range = valid_range
     args.test_range = test_range
-
+    print(args.num_feat, args.num_node_type)
+    exit()
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
 
