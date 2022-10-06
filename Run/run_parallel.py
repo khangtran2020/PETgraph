@@ -164,11 +164,11 @@ def log_basic_info(logger, config):
         logger.info(f"- CUDA version: {torch.version.cuda}")
         logger.info(f"- CUDNN version: {cudnn.version()}")
 
-    logger.info("\n")
-    logger.info("Configuration:")
-    for key, value in config.items():
-        logger.info(f"\t{key}: {value}")
-    logger.info("\n")
+    # logger.info("\n")
+    # logger.info("Configuration:")
+    # for key, value in config.items():
+    #     logger.info(f"\t{key}: {value}")
+    # logger.info("\n")
 
     if dist.get_world_size() > 1:
         logger.info("\nDistributed setting:")
