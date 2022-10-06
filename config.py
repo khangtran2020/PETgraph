@@ -44,6 +44,10 @@ def add_model_group(group):
     group.add_argument("--num_workers", type=int, default=0)
     group.add_argument("--path_result", type=str, default='results/exp_result.csv')
 
+    group.add_argument("--num_warmup_epochs", type=int, default=1)
+    group.add_argument("--with_clearml", type=bool, default=False)
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     data_group = parser.add_argument_group(title="Data-related configuration")

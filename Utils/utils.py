@@ -290,9 +290,11 @@ def read_data(args):
     return feat_dict
 
 def create_modified_het_graph_from_edges(df, feat_dict):
+    print('we are here 1')
     logger = logging.getLogger('factory-naive-het-graph')
     logger.setLevel(logging.INFO)
 
+    print('we are here 2')
     with timeit(logger, 'node-type-init'):
         view = df[['MessageId', 'Days']].drop_duplicates()
         node_ts = dict((k, v) for k, v in view.itertuples(index=False))
@@ -335,7 +337,7 @@ def create_modified_het_graph_from_edges(df, feat_dict):
             (node, tp)
             for node, tp in view.itertuples(index=False)
         ))
-
+    print('we are here 3')
     # if 'sender_type' not in df:
     df['sender_type'] = 'sender'
     df['receiver_type'] = 'receiver'
@@ -367,4 +369,17 @@ def create_modified_het_graph_from_edges(df, feat_dict):
     seed_label = dict((k, v) for k, v in view.itertuples(index=False))
 
     return ModifiedHetGraph(node_type, edge_list, feat_dict=feat_dict, seed_label=seed_label, node_ts=node_ts)
+
+def prepare_batch_para(batch, device, non_blocking=False):
+    x, y = batch
+    mask, x, edge_list, node_type, edge_type = x
+    x = convert_tensor(x, device=device, non_blocking=non_blocking)
+    edge_list = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_list]
+    y = convert_tensor(y, device=device, non_blocking=non_blocking)
+    mask = convert_tensor(mask, device=device, non_blocking=non_blocking)
+    y = y[mask]
+    node_type = convert_tensor(node_type, device=device, non_blocking=non_blocking)
+    edge_type = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_type]
+    return ((mask, x, edge_list, node_type, edge_type), y)
+
 
