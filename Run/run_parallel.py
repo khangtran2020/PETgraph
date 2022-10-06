@@ -216,7 +216,7 @@ def setup_rank_zero(logger, config):
     now = time.time()
     output_path = config.save_path
     folder_name = (
-        f"{config['model']}_backend-{dist.backend()}-{dist.get_world_size()}_{now}"
+        f"{config.conv_name}_backend-{dist.backend()}-{dist.get_world_size()}_{now}"
     )
     output_path = Path(output_path) / folder_name
     if not output_path.exists():
