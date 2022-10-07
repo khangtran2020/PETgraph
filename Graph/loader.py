@@ -218,7 +218,7 @@ class ParallelHetDataLoader(object):
             assert len(batch_size) == len(self.label_seed)
         self.seed_epoch = seed_epoch
         self.batch_size = batch_size
-        self.n_batch = int(n_batch/world_size)
+        self.n_batch = int(n_batch / world_size)
         self.shuffle = shuffle
         self.num_workers = num_workers
         self.depth = depth
@@ -286,8 +286,8 @@ class ParallelHetDataLoader(object):
             neighbor_sampler = self.get_sage_neighbor_sampler(seeds=seeds)
             sampler = DistributedSampler(dataset=seeds_encoded, num_replicas=self.world_size, rank=self.rank,
                                          shuffle=self.shuffle)
-            bz = int(sum(self.batch_size) / self.world_size) if not self.seed_epoch else (
-            int(self.batch_size[0] / self.world_size), int(self.batch_size[1] / self.world_size))
+            bz = int(sum(self.batch_size) / self.world_size) if not self.seed_epoch else int(
+                self.batch_size / self.world_size)
             dl = DataLoader(seeds_encoded, batch_size=bz, shuffle=self.shuffle, pin_memory=self.pin_memory,
                             sampler=sampler, num_workers=self.num_workers)
 
