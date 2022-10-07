@@ -205,9 +205,7 @@ def create_naive_het_homo_graph_from_edges(df):
                          seed_label=seed_label, node_ts=node_ts)
 
 
-def prepare_batch(batch, ts_range, fstore, default_feature,
-                  g: NaiveHetGraph,
-                  device, non_blocking=False):
+def prepare_batch(batch, ts_range, fstore, default_feature, g: NaiveHetGraph, device, non_blocking=False):
     encoded_seeds, encoded_ids, edge_ids = batch
     encoded_seeds = set(encoded_seeds)
     encode_to_new = dict((e, i) for i, e in enumerate(encoded_ids))
@@ -372,7 +370,6 @@ def prepare_batch_para(batch, device, non_blocking=False):
     edge_list = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_list]
     y = convert_tensor(y, device=device, non_blocking=non_blocking)
     mask = convert_tensor(mask, device=device, non_blocking=non_blocking)
-    y = y[mask]
     node_type = convert_tensor(node_type, device=device, non_blocking=non_blocking)
     edge_type = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_type]
     return ((mask, x, edge_list, node_type, edge_type), y)
