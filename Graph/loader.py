@@ -200,6 +200,7 @@ class NaiveHetDataLoader(object):
             )
         raise NotImplementedError('unknown method %s' % self.method)
 
+
 class ParallelHetDataLoader(object):
     logger = logging.getLogger('native-het-dl')
 
@@ -217,7 +218,7 @@ class ParallelHetDataLoader(object):
             assert len(batch_size) == len(self.label_seed)
         self.seed_epoch = seed_epoch
         self.batch_size = batch_size
-        self.n_batch = n_batch
+        self.n_batch = int(n_batch/world_size)
         self.shuffle = shuffle
         self.num_workers = num_workers
         self.depth = depth
@@ -285,7 +286,8 @@ class ParallelHetDataLoader(object):
             neighbor_sampler = self.get_sage_neighbor_sampler(seeds=seeds)
             sampler = DistributedSampler(dataset=seeds_encoded, num_replicas=self.world_size, rank=self.rank,
                                          shuffle=self.shuffle)
-            bz = sum(self.batch_size) if not self.seed_epoch else self.batch_size
+            bz = int(sum(self.batch_size) / self.world_size) if not self.seed_epoch else (
+            int(self.batch_size[0] / self.world_size), int(self.batch_size[1] / self.world_size))
             dl = DataLoader(seeds_encoded, batch_size=bz, shuffle=self.shuffle, pin_memory=self.pin_memory,
                             sampler=sampler, num_workers=self.num_workers)
 
@@ -297,7 +299,7 @@ class ParallelHetDataLoader(object):
                 edge_ids = self.convert_sage_adjs_to_edge_ids(adjs)
                 encoded_seeds = encoded_seeds.numpy()
                 batch = (encoded_seeds, encoded_node_ids, edge_ids)
-                x, y = self.prepare_batch(batch = batch)
+                x, y = self.prepare_batch(batch=batch)
                 if self.cache_result:
                     self.cache.append([x, y])
                 yield x, y
@@ -406,6 +408,7 @@ class ParallelHetDataLoader(object):
                 shuffle=self.shuffle,
             )
         raise NotImplementedError('unknown method %s' % self.method)
+
 
 class DataLoader(object):
     logger = logging.getLogger('data-loader')
