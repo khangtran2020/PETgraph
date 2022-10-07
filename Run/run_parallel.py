@@ -228,7 +228,8 @@ def setup_rank_zero(logger, config):
 def training(local_rank, config, g):
     rank = dist.get_rank()
     manual_seed(config.seed + rank)
-    device = dist.device()
+    torch.cuda.set_device(local_rank)
+    device = torch.device("cuda")
 
     logger = setup_logger(name="PET-Training")
     log_basic_info(logger, config)

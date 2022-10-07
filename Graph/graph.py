@@ -92,6 +92,7 @@ class ModifiedHetGraph(object):
         self.node_type_encode = self.get_node_type_encoder(node_type)
         self.seed_label = seed_label
         self.node_ts = node_ts
+
         self.feat_dict = feat_dict
         self.index_dict = index_dict
         with timeit(self.logger, 'node-enc-init'):
