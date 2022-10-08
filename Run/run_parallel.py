@@ -34,7 +34,7 @@ import ignite.distributed as dist
 from ignite.engine import EventEnum, _prepare_batch
 from ignite.engine.deterministic import DeterministicEngine
 from ignite.contrib.engines import common
-
+from ignite.contrib.handlers.tqdm_logger import ProgressBar
 # other things
 from Utils.fstore import FeatureStore
 from Utils.utils import create_modified_het_graph_from_edges as _create_modified_het_graph_from_edges
@@ -259,6 +259,7 @@ def training(local_rank, config, g):
                                                     output_transform=lambda out: (out[0][:, 1], out[1])),
                                             }, device=device, prepare_batch=pb)
     pbar_train = tqdm.tqdm(desc='train', total=len(dl_train), ncols=100)
+    pbar_val = tqdm.tqdm(desc='valid', total=len(dl_valid), ncols=100)
     t_epoch = Timer(average=True)
     t_epoch.pause()
 
@@ -309,6 +310,8 @@ def training(local_rank, config, g):
     def score_function(engine):
         return engine.state.metrics['auc']
 
+    pbar = ProgressBar()
+    pbar.attach(evaluator, ['loss', 'accuracy', 'auc', 'ap'])
     handler = EarlyStopping(patience=config.patient, score_function=score_function, trainer=trainer)
     evaluator.add_event_handler(Events.COMPLETED, handler)
 
