@@ -366,7 +366,7 @@ def create_modified_het_graph_from_edges(df, index_dict, feat_dict):
 def prepare_batch_para(batch, device, non_blocking=False):
     x, y = batch
     mask, x, edge_list, node_type, edge_type = x
-    print((mask == True).nonzero(as_tuple=True)[0])
+    print((mask == True).nonzero(as_tuple=True)[0], mask.size())
     x = convert_tensor(x, device=device, non_blocking=non_blocking)
     edge_list = [convert_tensor(e, device=device, non_blocking=non_blocking) for e in edge_list]
     y = convert_tensor(y, device=device, non_blocking=non_blocking)
