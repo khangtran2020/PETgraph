@@ -315,10 +315,10 @@ def training(local_rank, config, g):
     handler = EarlyStopping(patience=config.patient, score_function=score_function, trainer=trainer)
     evaluator.add_event_handler(Events.COMPLETED, handler)
 
-    cp = ModelCheckpoint(config.dir_model, f'model-{config.conv_name}-{config.seed}', n_saved=1,
-                         create_dir=True,
-                         score_function=lambda e: evaluator.state.metrics['auc'],
-                         require_empty=False)
+    # cp = ModelCheckpoint(config.dir_model, f'model-{config.conv_name}-{config.seed}', n_saved=1,
+    #                      create_dir=True,
+    #                      score_function=lambda e: evaluator.state.metrics['auc'],
+    #                      require_empty=False)
     # trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {config.conv_name: model})
 
     if rank == 0:
