@@ -293,16 +293,15 @@ def training(local_rank, config, g):
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(engine):
         t_epoch.step()
-        if int(engine.state.epoch) % 10 == 0:
-            evaluator.run(dl_valid)
-            metrics = evaluator.state.metrics
-            logger.info(
-                '[Epoch %03d]\tLoss %.4f\tAccuracy %.4f\tAUC %.4f\tAP %.4f \tTime %.2f / %03d',
-                engine.state.epoch,
-                metrics['loss'], metrics['accuracy'],
-                metrics['auc'], metrics['ap'],
-                t_epoch.value(), t_epoch.step_count
-            )
+        evaluator.run(dl_valid)
+        metrics = evaluator.state.metrics
+        logger.info(
+            '[Epoch %03d]\tLoss %.4f\tAccuracy %.4f\tAUC %.4f\tAP %.4f \tTime %.2f / %03d',
+            engine.state.epoch,
+            metrics['loss'], metrics['accuracy'],
+            metrics['auc'], metrics['ap'],
+            t_epoch.value(), t_epoch.step_count
+        )
         t_iter.reset()
         t_epoch.pause()
         t_iter.pause()
@@ -315,11 +314,11 @@ def training(local_rank, config, g):
     handler = EarlyStopping(patience=config.patient, score_function=score_function, trainer=trainer)
     evaluator.add_event_handler(Events.COMPLETED, handler)
 
-    # cp = ModelCheckpoint(config.dir_model, f'model-{config.conv_name}-{config.seed}', n_saved=1,
-    #                      create_dir=True,
-    #                      score_function=lambda e: evaluator.state.metrics['auc'],
-    #                      require_empty=False)
-    # trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {config.conv_name: model})
+    cp = ModelCheckpoint(config.dir_model, f'model-{config.conv_name}-{config.seed}', n_saved=1,
+                         create_dir=True,
+                         score_function=lambda e: evaluator.state.metrics['auc'],
+                         require_empty=False)
+    trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {config.conv_name: model})
 
     if rank == 0:
         evaluators = {"train": evaluator, "val": evaluator}
