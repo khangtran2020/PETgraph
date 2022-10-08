@@ -319,7 +319,7 @@ def training(local_rank, config, g):
                          create_dir=True,
                          score_function=lambda e: evaluator.state.metrics['auc'],
                          require_empty=False)
-    trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {config.conv_name: model})
+    # trainer.add_event_handler(Events.EPOCH_COMPLETED, cp, {config.conv_name: model})
 
     if rank == 0:
         evaluators = {"train": evaluator, "val": evaluator}
