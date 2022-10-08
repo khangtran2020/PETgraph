@@ -259,7 +259,6 @@ def training(local_rank, config, g):
                                                     output_transform=lambda out: (out[0][:, 1], out[1])),
                                             }, device=device, prepare_batch=pb)
     pbar_train = tqdm.tqdm(desc='train', total=len(dl_train), ncols=100)
-    pbar_val = tqdm.tqdm(desc='valid', total=len(dl_valid), ncols=100)
     t_epoch = Timer(average=True)
     t_epoch.pause()
 
