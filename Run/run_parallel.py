@@ -293,15 +293,16 @@ def training(local_rank, config, g):
     @trainer.on(Events.EPOCH_COMPLETED)
     def log_training_results(engine):
         t_epoch.step()
-        evaluator.run(dl_valid)
-        metrics = evaluator.state.metrics
-        logger.info(
-            '[Epoch %03d]\tLoss %.4f\tAccuracy %.4f\tAUC %.4f\tAP %.4f \tTime %.2f / %03d',
-            engine.state.epoch,
-            metrics['loss'], metrics['accuracy'],
-            metrics['auc'], metrics['ap'],
-            t_epoch.value(), t_epoch.step_count
-        )
+        if int(engine.state.epoch) % 10 == 0:
+            evaluator.run(dl_valid)
+            metrics = evaluator.state.metrics
+            logger.info(
+                '[Epoch %03d]\tLoss %.4f\tAccuracy %.4f\tAUC %.4f\tAP %.4f \tTime %.2f / %03d',
+                engine.state.epoch,
+                metrics['loss'], metrics['accuracy'],
+                metrics['auc'], metrics['ap'],
+                t_epoch.value(), t_epoch.step_count
+            )
         t_iter.reset()
         t_epoch.pause()
         t_iter.pause()
