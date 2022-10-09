@@ -225,7 +225,8 @@ def setup_rank_zero(logger, config):
     logger.info(f"Output path: {config.save_path}")
 
 
-def training(local_rank, config, g):
+def training(local_rank, config, g, result_dict):
+    stats = {}
     rank = dist.get_rank()
     manual_seed(config.seed + rank)
     torch.cuda.set_device(local_rank)
@@ -243,21 +244,22 @@ def training(local_rank, config, g):
     optimizer = prepare_optimizer(config, model)
     criterion = get_criterion()
     config.num_iters_per_epoch = len(dl_train)
-    pb = partial(prepare_batch_para, device = device)
-    trainer = udf_supervised_trainer(model=model, optimizer=optimizer, loss_fn=criterion, device=dist.device(), prepare_batch=pb)
+    pb = partial(prepare_batch_para, device=device)
+    trainer = udf_supervised_trainer(model=model, optimizer=optimizer, loss_fn=criterion, device=dist.device(),
+                                     prepare_batch=pb)
     scheduler = CosineAnnealingScheduler(
-            optimizer, 'lr',
-            start_value=0.05, end_value=1e-4,
-            cycle_size=len(dl_train) * config.n_step)
+        optimizer, 'lr',
+        start_value=0.05, end_value=1e-4,
+        cycle_size=len(dl_train) * config.n_step)
     trainer.add_event_handler(Events.ITERATION_STARTED, scheduler)
     evaluator = create_supervised_evaluator(model, metrics={
-                                                'accuracy': Accuracy(),
-                                                'loss': Loss(criterion),
-                                                'ap': AveragePrecision(
-                                                    output_transform=lambda out: (out[0][:, 1], out[1])),
-                                                'auc': ROC_AUC(
-                                                    output_transform=lambda out: (out[0][:, 1], out[1])),
-                                            }, device=device, prepare_batch=pb, amp_mode=True)
+        'accuracy': Accuracy(),
+        'loss': Loss(criterion),
+        'ap': AveragePrecision(
+            output_transform=lambda out: (out[0][:, 1], out[1])),
+        'auc': ROC_AUC(
+            output_transform=lambda out: (out[0][:, 1], out[1])),
+    }, device=device, prepare_batch=pb, amp_mode=True)
     pbar_train = tqdm.tqdm(desc='train', total=len(dl_train), ncols=100)
     t_epoch = Timer(average=True)
     t_epoch.pause()
@@ -302,6 +304,12 @@ def training(local_rank, config, g):
             metrics['auc'], metrics['ap'],
             t_epoch.value(), t_epoch.step_count
         )
+        if (rank == 0):
+            result_dict['loss'].append(metrics['loss'])
+            result_dict['acc'].append(metrics['accuracy'])
+            result_dict['auc'].append(metrics['auc'])
+            result_dict['ap'].append(metrics['ap'])
+
         t_iter.reset()
         t_epoch.pause()
         t_iter.pause()
@@ -333,7 +341,37 @@ def training(local_rank, config, g):
         raise e
 
     if rank == 0:
+        df = pd.DataFrame.from_dict(result_dict)
+        df.to_csv(config.save_path + 'train_proces_width_{}_depth_{}_batch_size_({},{}).csv'.format(config.width,
+                                                                                                    config.depth,
+                                                                                                    config.batch_size[
+                                                                                                        0],
+                                                                                                    config.batch_size[
+                                                                                                        1]))
         tb_logger.close()
+        path_model = cp.last_checkpoint
+        model.load_state_dict(torch.load(path_model))
+        model.eval()
+        with torch.no_grad():
+            evaluator.run(dl_test)
+        metrics = evaluator.state.metrics
+        logger.info(
+            'Test\tLoss %.2f\tAccuracy %.2f\tAUC %.4f\tAP %.4f',
+            metrics['loss'], metrics['accuracy'],
+            metrics['auc'], metrics['ap']
+        )
+
+        stats.update(dict(metrics))
+
+        stats['epoch'] = trainer.state.epoch,
+
+        row = pd.DataFrame([stats])
+        if os.path.exists(config.path_result):
+            result = pd.read_csv(config.path_result)
+        else:
+            result = pd.DataFrame()
+        result = result.append(row)
+        result.to_csv(config.path_result, index=False)
 
 
 def main(args):
@@ -395,8 +433,14 @@ def main(args):
     # exit()
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
+    result_dict = {
+        'loss': [],
+        'acc': [],
+        'auc': [],
+        'ap': []
+    }
 
     with dist.Parallel(backend=args.backend, nproc_per_node=args.nproc_per_node) as parallel:
-        parallel.run(training, config=args, g = g)
+        parallel.run(training, config=args, g=g, result_dict=result_dict)
 
     #
