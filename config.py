@@ -23,7 +23,7 @@ def add_data_group(group):
     group.add_argument('--path_g', type=str, default='data/full_graph.csv', help="the directory used to save dataset")
 
 def add_model_group(group):
-    group.add_argument("--lr", type=float, default=0.01, help="learning rate")
+    group.add_argument("--lr", type=float, default=1e-6, help="learning rate")
     group.add_argument("--wd", type=float, default=1e-3, help="weight decay")
     group.add_argument("--conv_name", type=str, default='het-emb', help="embedding dim")
     group.add_argument('--sample_method', type=str, default='sage')

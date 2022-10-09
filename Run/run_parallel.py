@@ -257,7 +257,7 @@ def training(local_rank, config, g):
                                                     output_transform=lambda out: (out[0][:, 1], out[1])),
                                                 'auc': ROC_AUC(
                                                     output_transform=lambda out: (out[0][:, 1], out[1])),
-                                            }, device=device, prepare_batch=pb)
+                                            }, device=device, prepare_batch=pb, amp_mode=True)
     pbar_train = tqdm.tqdm(desc='train', total=len(dl_train), ncols=100)
     t_epoch = Timer(average=True)
     t_epoch.pause()
@@ -372,8 +372,8 @@ def main(args):
     seed_set = set(df_edges.query('seed>0')['MessageId'])
     logger.info('#seed %d', len(seed_set))
     if args.debug:
-        train_range = set(range(15, 22))
-        valid_range = set(range(22, 24))
+        train_range = set(range(15, 23))
+        valid_range = set(range(23, 24))
         test_range = set(range(24, 31))
     else:
         train_range = set(range(1, 22))
