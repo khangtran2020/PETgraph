@@ -342,7 +342,7 @@ def training(local_rank, config, g, result_dict):
 
     if rank == 0:
         df = pd.DataFrame.from_dict(result_dict)
-        df.to_csv(config.save_path + 'train_proces_width_{}_depth_{}_batch_size_({},{}).csv'.format(config.width,
+        df.to_csv(config.res_path + 'train_proces_width_{}_depth_{}_batch_size_{}_{}.csv'.format(config.width,
                                                                                                     config.depth,
                                                                                                     config.batch_size[
                                                                                                         0],
