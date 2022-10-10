@@ -309,6 +309,13 @@ def training(local_rank, config, g, result_dict):
             result_dict['acc'].append(metrics['accuracy'])
             result_dict['auc'].append(metrics['auc'])
             result_dict['ap'].append(metrics['ap'])
+            df = pd.DataFrame.from_dict(result_dict)
+            df.to_csv(config.res_path + 'train_proces_width_{}_depth_{}_batch_size_{}_{}.csv'.format(config.width,
+                                                                                                     config.depth,
+                                                                                                     config.batch_size[
+                                                                                                         0],
+                                                                                                     config.batch_size[
+                                                                                                         1]))
 
         t_iter.reset()
         t_epoch.pause()
