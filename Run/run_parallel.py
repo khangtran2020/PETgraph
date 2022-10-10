@@ -349,8 +349,8 @@ def training(local_rank, config, g, result_dict):
                                                                                                     config.batch_size[
                                                                                                         1]))
         tb_logger.close()
-        path_model = cp.last_checkpoint
-        model.load_state_dict(torch.load(path_model))
+        # path_model = cp.last_checkpoint
+        # model.load_state_dict(torch.load(path_model))
         model.eval()
         with torch.no_grad():
             evaluator.run(dl_test)
