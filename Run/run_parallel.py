@@ -317,8 +317,8 @@ def training(local_rank, config, g, result_dict):
     def score_function(engine):
         return engine.state.metrics['auc']
 
-    pbar = ProgressBar()
-    pbar.attach(evaluator, [])
+    # pbar = ProgressBar()
+    # pbar.attach(evaluator, [])
     handler = EarlyStopping(patience=config.patient, score_function=score_function, trainer=trainer)
     evaluator.add_event_handler(Events.COMPLETED, handler)
 
