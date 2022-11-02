@@ -23,8 +23,8 @@ from config import parse_args
 from Utils.fstore import FeatureStore
 
 
-def main(args, path_db='../data/feat_store.db'):
-    data_path = '../'
+def main(args, path_db='data/feat_store.db'):
+    data_path = './'
     store = FeatureStore(path_db)
     node_type = ['bank', 'account', 'address']
     uid_cols = ['MessageId', 'Timestamp', 'UETR', 'Sender', 'Receiver', 'OrderingAccount', 'BeneficiaryAccount', 'Label', 'OrderingOriginAdd', 'BeneficiaryOriginAdd']
